@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2026-09-01T10:00:08.000Z","message":{"role":"user","content":"Run execute-phase for .planning/phases/01-setup"},"isSidechain":true,"agentId":"gp1"}
+{"type":"assistant","timestamp":"2026-09-01T10:00:09.000Z","message":{"id":"msg_g1","role":"assistant","model":"claude-x","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":10,"cache_creation_input_tokens":3490,"cache_read_input_tokens":1000,"output_tokens":500}},"isSidechain":true}

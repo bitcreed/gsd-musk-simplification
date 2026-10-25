@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2026-09-01T10:00:19.000Z","message":{"role":"user","content":"<objective>\n[gsd:dispatch phase=\"2\" plan=\"02-01\"]\n</objective>"},"isSidechain":true,"agentId":"e4"}
+{"type":"assistant","timestamp":"2026-09-01T10:00:20.000Z","message":{"id":"msg_e4","role":"assistant","model":"claude-x","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":10,"cache_creation_input_tokens":109490,"cache_read_input_tokens":1000,"output_tokens":500}},"isSidechain":true}

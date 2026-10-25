@@ -1,0 +1,23 @@
+{
+  "name": "gsd-musk-simplification",
+  "version": "0.5.0",
+  "description": "GSD capability: a subtraction pass (question, delete, simplify) with a savings ledger priced from real Claude Code token usage.",
+  "license": "MIT",
+  "author": "Andreas Brauchli",
+  "main": "musk-router.cjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.cjs"
+  },
+  "files": [
+    "capability.json",
+    "musk-router.cjs",
+    "lib/",
+    "skills/",
+    "fragments/",
+    "DESIGN.md",
+    "README.md"
+  ]
+}

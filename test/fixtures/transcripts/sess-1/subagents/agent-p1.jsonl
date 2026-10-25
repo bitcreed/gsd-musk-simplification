@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2026-09-01T10:00:23.000Z","message":{"role":"user","content":"Write plans. Python 3.11 is required."},"isSidechain":true,"agentId":"p1"}
+{"type":"assistant","timestamp":"2026-09-01T10:00:24.000Z","message":{"id":"msg_p1","role":"assistant","model":"claude-x","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":10,"cache_creation_input_tokens":29490,"cache_read_input_tokens":1000,"output_tokens":500}},"isSidechain":true}

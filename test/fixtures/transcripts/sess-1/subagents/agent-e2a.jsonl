@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2026-09-01T10:00:13.000Z","message":{"role":"user","content":"Execute the plan."},"isSidechain":true,"agentId":"e2a"}
+{"type":"assistant","timestamp":"2026-09-01T10:00:14.000Z","message":{"id":"msg_e2a","role":"assistant","model":"claude-x","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":10,"cache_creation_input_tokens":59490,"cache_read_input_tokens":1000,"output_tokens":500}},"isSidechain":true}

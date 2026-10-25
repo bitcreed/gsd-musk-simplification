@@ -1,0 +1,146 @@
+{
+  "id": "musk",
+  "role": "feature",
+  "version": "0.5.0",
+  "title": "Musk subtraction pass",
+  "description": "Applies Musk's algorithm (question requirements, delete, then simplify) to GSD planning: challenges milestones, requirements and implementation before they are built, routes small phases through the leanest workflow that will do, logs every cut in a ledger, and prices the savings from your real Claude Code token usage.",
+  "tier": "full",
+  "requires": [],
+  "engines": {
+    "gsd": ">=1.15.0"
+  },
+  "runtimeCompat": {
+    "supported": [
+      "*"
+    ],
+    "unsupported": [],
+    "notes": {
+      "*": "Hooks and ledger work on every runtime. Token calibration reads Claude Code transcripts; other runtimes fall back to labelled priors."
+    }
+  },
+  "author": {
+    "name": "Andreas Brauchli",
+    "url": "https://github.com/bitcreed"
+  },
+  "homepage": "https://github.com/bitcreed/gsd-musk-simplification",
+  "repository": "https://github.com/bitcreed/gsd-musk-simplification",
+  "license": "MIT",
+  "keywords": [
+    "subtraction",
+    "scope",
+    "ceremony",
+    "tokens"
+  ],
+  "skills": [
+    "musk-roadmap",
+    "musk-retro"
+  ],
+  "agents": [],
+  "activationKey": "musk.enabled",
+  "config": {
+    "musk.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable the musk subtraction pass. On by default: installing the capability is the opt-in. Set false in a project to opt that project out."
+    },
+    "musk.scope_cuts": {
+      "type": "enum",
+      "values": [
+        "defer",
+        "propose",
+        "ask"
+      ],
+      "default": "defer",
+      "description": "How scope cuts (dropping a requirement, success criterion or phase) are handled. defer: apply reversibly (move to v2 / backlog, record a [deferred] decision, mark inferred for audit) without asking. propose: log proposals only and keep full scope. ask: ask the user for each batch of cuts. Implementation cuts never remove a sourced requirement and are always applied."
+    },
+    "musk.lean_lane": {
+      "type": "boolean",
+      "default": true,
+      "description": "Small phases (3 tasks or fewer, one subsystem, no new dependency, no open user question) take the lean lane: CONTEXT.md is written without gray-area questioning, research is skipped, and the phase gets one plan."
+    },
+    "musk.milestone_pass": {
+      "type": "boolean",
+      "default": true,
+      "description": "Run the one-shot milestone subtraction (musk-roadmap) at the first discuss of a milestone, before any phase has context or plans."
+    }
+  },
+  "commands": [
+    {
+      "family": "musk",
+      "module": "musk-router.cjs",
+      "router": "routeMuskCommand",
+      "subcommands": [
+        "log",
+        "reinstate",
+        "confirm",
+        "list",
+        "pass",
+        "phase-check",
+        "milestone-check",
+        "audit",
+        "calibrate",
+        "stats"
+      ]
+    }
+  ],
+  "hooks": [],
+  "steps": [
+    {
+      "point": "verify:post",
+      "ref": {
+        "command": "musk stats --record"
+      },
+      "produces": [],
+      "consumes": [],
+      "when": "musk.enabled",
+      "onError": "skip"
+    }
+  ],
+  "contributions": [
+    {
+      "point": "discuss:pre",
+      "into": "orchestrator",
+      "fragment": {
+        "path": "fragments/discuss-pre-milestone.md"
+      },
+      "produces": [],
+      "consumes": [],
+      "when": "musk.milestone_pass",
+      "onError": "skip"
+    },
+    {
+      "point": "discuss:pre",
+      "into": "orchestrator",
+      "fragment": {
+        "path": "fragments/discuss-pre.md"
+      },
+      "produces": [],
+      "consumes": [],
+      "when": "musk.enabled",
+      "onError": "skip"
+    },
+    {
+      "point": "discuss:pre",
+      "into": "orchestrator",
+      "fragment": {
+        "path": "fragments/discuss-pre-lean.md"
+      },
+      "produces": [],
+      "consumes": [],
+      "when": "musk.lean_lane",
+      "onError": "skip"
+    },
+    {
+      "point": "plan:pre",
+      "into": "planner",
+      "fragment": {
+        "path": "fragments/plan-pre-planner.md"
+      },
+      "produces": [],
+      "consumes": [],
+      "when": "musk.enabled",
+      "onError": "skip"
+    }
+  ],
+  "gates": []
+}
