@@ -91,7 +91,7 @@ installed, and it tells you when a manual step is due. Nothing else asks for you
 
 ```bash
 node ~/.claude/gsd-core/bin/gsd-tools.cjs capability install \
-  git+ssh://git@github.com/bitcreed/gsd-musk-simplification.git#v0.5.0 --scope global   # private repo: https:// needs a git credential helper; plain git@ / ssh:// are rejected
+  https://github.com/bitcreed/gsd-musk-simplification.git#v0.5.0 --scope global
 node ~/.claude/gsd-core/bin/gsd-tools.cjs capability set musk --on --runtime claude   # stage the skills now
 ```
 
