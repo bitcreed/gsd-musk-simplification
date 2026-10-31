@@ -2,7 +2,7 @@
 
 Measured on one developer's GSD projects. The first sections describe **plain GSD** before musk:
 14 projects (12 with Claude Code transcripts), 2026-08-20 to 2026-09-29, labelled A–N. *Month 1 in
-use* measures musk itself on 10 projects, labelled P1–P10; the two label sets are independent.
+use* measures musk itself on 11 projects, labelled P1–P11; the two label sets are independent.
 Labels carry no project details on purpose.
 
 Regenerate: `node scripts/real-world-stats.cjs <project-dir>...` (read-only, zero deps, uses `lib/`).
@@ -108,10 +108,10 @@ has run on a real project.
 
 ## Month 1 in use (2026-09-29 to 2026-10-24)
 
-musk v0.3–v0.5 ran on 10 projects of one developer, all with `scope_cuts: defer`. The ledger is
+musk v0.3–v0.5 ran on 11 projects of one developer, all with `scope_cuts: defer`. The ledger is
 measured; savings are estimates (deleted work never ran), priced with v0.5's `lib/pricing.cjs`
 from each project's own transcripts (`harness`) or the priors above (`prior`, fewer than 5 samples).
-Projects are labelled by spend rank.
+Projects P1–P10 are labelled by spend rank; P11 was added later.⁵
 
 | Project | Spend | Cuts | Restored | Est. net p50 | Net ÷ spend | musk's own cost ÷ spend | Basis |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -125,7 +125,8 @@ Projects are labelled by spend rank.
 | P8 | 9M | 2 | 0 | 0.4M | 4.1% | 0.7% | prior |
 | P9 | 9M | 5 | 0 | 1.2M | 13.7% | 0 | prior |
 | P10 | 9M | 4 | 0 | 0.1M | 1.6% | 0.9% | harness |
-| **All** | **474M** | **226** | **30** | **36.9M** | **7.8%** aggregate, **5.7%** median | **0.4%** | |
+| P11 | 56M⁵ | 7 | 0 | 2.0M | 3.6% | <0.1% | prior |
+| **All** | **530M** | **233** | **30** | **38.9M** | **7.3%** aggregate, **4.1%** median | **0.4%** | |
 
 ¹ Inflated: two plan steps were logged as `phase-merge` (priced at 35% of a phase each) and two
 plan-level features at milestone level. Without them P4 is about 9%.
@@ -140,6 +141,11 @@ was re-measured over the same window with the old and the new attribution and th
 applied (P1 −1.0M, P5 −0.5M, P6 −1.5M; P3 +0.07M, as runs where the fragments were actually
 injected now count before the first ledger row). Gross savings are unchanged. v0.5.3 reported
 33.9M net, a 7.2% aggregate and an own cost of 1.0%.
+⁵ Developed on another machine with musk v0.3.1, so its transcripts are not on this one. Its
+ledger and a `calibration.json` written by v0.5.4 there are checked into the project, and the
+row is priced from those. Spend is the whole transcript history up to 2026-10-31, not just the
+window, so its ratios are lower bounds. It has no retro yet: all 7 cuts are `inferred` and
+unreviewed. Without P11 the totals were 474M spend, 36.9M net, 7.8% aggregate and 5.7% median.
 
 **Review.** Seven projects (P1–P6, P8) ran `/gsd-musk-retro`. The retro reinstated cuts that git
 history showed were rebuilt, confirmed the ones that held, and asked the user about scope cuts.
@@ -154,8 +160,9 @@ healthy. What came back:
 The first two are now on the planner's never-cut list (v0.4.5).
 
 **What the month showed:**
-- **Typical saving about 6% of spend**, with a long tail to about 14% on projects with roadmap
-  bloat. musk's own cost is about 0.4% of spend, so on these estimates it pays for itself about 20×.
+- **Typical saving about 4–6% of spend** (median 4.1%), with a long tail to about 14% on projects
+  with roadmap bloat. musk's own cost is about 0.4% of spend, so on these estimates it pays for
+  itself about 20×.
 - **Most of the value is scope and implementation cuts.** The lean lane fired once in a month,
   consistent with the 7% eligibility estimate above.
 - **Reminders depend on the verify:post step, which rarely ran.** One project recorded 3

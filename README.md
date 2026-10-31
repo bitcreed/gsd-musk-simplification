@@ -1,6 +1,7 @@
 # musk: a subtraction pass for GSD
 
 > "The most common error of a smart engineer is to optimize a thing that should not exist."
+> — Elon Musk, Starbase tour with Everyday Astronaut (2021)
 
 Most of GSD pushes toward *more*: every requirement covered, every gap filled, every phase fully
 discussed, researched, planned in 3–5 plans, checked, verified. This capability adds the
@@ -9,14 +10,14 @@ missing question, **should this exist, and at what size?**, and asks it wherever
 | Level | When | What gets cut |
 |---|---|---|
 | Milestone | first discuss or plan of a milestone (one-shot), or `/gsd-musk-roadmap` | whole phases (to backlog), merges, unowned requirements |
-| Requirements | every `discuss:pre`; again at `plan:pre` for any phase with no recorded pass | requirements and success criteria with no owner; over-broad ones narrowed |
+| Requirements | every `discuss:pre`; again at `plan:pre` for any phase with no recorded pass (proposed only: the requirement list is fixed by then) | requirements and success criteria with no owner; over-broad ones narrowed |
 | Ceremony | every `discuss:pre` | small phases take the **lean lane**: short discuss, no researcher, one plan |
 | Implementation & plans | every `plan:pre` (also `/gsd-quick`, not `/gsd-quick-batch`) | tasks, flags, layers, shims, docs, tests nobody asked for; fewest plans (≤3 tasks → one plan) |
 | Process | `/gsd-musk-retro` at milestone end | gates and steps that cost tokens and never caught anything |
 
 Every cut goes into `.planning/musk/ledger.jsonl`, and every phase's pass leaves a `pass` row, cuts or not. A phase that reaches planning with no pass row (discuss skipped, or a hand-driven discuss that missed the hook) gets the pass at `plan:pre`. The ledger always lives in the main checkout: commands run from a linked git worktree (an isolated subagent) write there, not into the worktree's committed copy, and planning reads follow the active workstream. `gsd-tools musk stats` prices the cuts from
 **your own measured token usage** (Claude Code transcripts of this project) and subtracts the
-pass's own cost.
+pass's own cost. Transcripts of Claude Code worktrees under the project count too.
 
 ## Why musk is a must-have
 
@@ -77,8 +78,8 @@ automate, and only later notice the thing shouldn't exist. Musk runs the steps i
 - Implementation cuts never remove a sourced requirement.
 - Unattended cuts are marked `inferred` and come up for review at the retro.
 
-**Month 1, measured.** On 10 projects over four weeks (474M tokens), musk's estimated net saving was
-**5.7% of spend for the median project** and 7.8% in aggregate, at a cost of about 0.4% of spend.
+**Month 1, measured.** On 11 projects over four weeks (530M tokens), musk's estimated net saving was
+**4.1% of spend for the median project** and 7.3% in aggregate, at a cost of about 0.4% of spend.
 Of 208 cuts reviewed at retros, 14.4% were restored. Details: [docs/stats.md](docs/stats.md#month-1-in-use-2026-09-29-to-2026-10-24).
 
 **6. It measures itself honestly.** Every cut is priced from **your own** token usage, parsed
@@ -104,7 +105,8 @@ That's it: it is on in every GSD project, existing ones included. Opt a project 
 The skills appear as `/gsd-musk-roadmap` and `/gsd-musk-retro`. GSD prefixes third-party skill stems with `gsd-`.
 
 The capability ships a command module (`gsd-tools musk …`), so the installer asks for consent.
-The module reads `.planning/` and this project's transcripts under `~/.claude/projects/<slug>/`.
+The module reads `.planning/` and this project's transcripts under `~/.claude/projects/<slug>/`
+(plus `<slug>--claude-worktrees-*` for Claude Code worktrees).
 It sends nothing anywhere.
 
 ## Configure
