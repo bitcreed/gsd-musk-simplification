@@ -56,6 +56,8 @@ Never suggest turning off security enforcement, or any gate that caught somethin
 ## 3. Write-up
 
 1. Write `RETRO-<slug>.md` containing sections 1 and 2, in the same directory as the `marker` path from `gsd-tools musk milestone-check`, with that path's `<slug>`. This file also tells musk the retro is done, so it stops suggesting it.
-2. Commit the retro, its ledger entries and any reinstatement edits: `gsd-tools query commit "docs(musk): <slug> retro" --files .planning/`. It applies the project's `commit_docs` policy itself, like every other GSD write-up.
+2. Commit with the message `docs(musk): <slug> retro`. Both steps apply the project's `commit_docs` policy themselves, like every other GSD write-up.
+   - Reinstatement edits: `gsd-tools query commit "<message>" --files <each planning file you edited>`. Never pass the whole `.planning/` directory. Skip this when you edited none.
+   - The retro file and its ledger entries: `gsd-tools musk commit --message "<message>"`.
 3. Show the user the summary: headline net savings with basis, the add-back ratio, and the suggested commands.
 4. Apply no config change without the user's approval.

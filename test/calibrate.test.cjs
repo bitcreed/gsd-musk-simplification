@@ -9,7 +9,7 @@ const { attribute, projectSlug } = require('../lib/transcripts.cjs');
 const { PRIORS } = require('../lib/pricing.cjs');
 
 test('project slug replaces every non-alphanumeric char', () => {
-  assert.equal(projectSlug('/home/u/projects/python/tt_book.x'), '-home-u-projects-python-tt-book-x');
+  assert.equal(projectSlug('/home/u/projects/python/my_app.x'), '-home-u-projects-python-my-app-x');
 });
 
 test('calibrate: dedupes streamed chunks by message.id and buckets orchestrator segments', () => {

@@ -137,3 +137,11 @@ test('workstream: a single-milestone ROADMAP without a 🚧 marker owns all its 
   assert.deepEqual(r.phases, ['6', '7']);
   assert.equal(r.run, true);
 });
+
+test('worktree: confirm reads and writes the main checkout ledger', () => {
+  const { ctx, wt } = repoWithWorktree();
+  const c = run(ctx, ['log', '--class', 'impl', '--unit', 'task', '--ref', 'x', '--reason', 'y', '--inferred']);
+  run(ctx, ['confirm', c.id], { cwd: wt });
+  assert.equal(run(ctx, ['list']).find((x) => x.id === c.id).unreviewed, false);
+  assert.equal(ledgerOf(wt).length, 1, 'the worktree copy is never written');
+});

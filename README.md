@@ -55,8 +55,10 @@ a hundred phases of it, and one deferred requirement pays for about a thousand.
 - A median phase directory holds **14 artifacts**. Musk's
 **lean lane** gives small phases the flow they deserve: no questioning, no researcher, one plan.
 The planner rules stop 1-task plans from being written at all. Honest sizing: only about 7% of
-real phases are small enough for the lean lane. The ceremony savings alone come to roughly
-0.5–7% of total tokens (see [docs/stats.md](docs/stats.md) for the arithmetic). The bigger lever is point 2, cutting
+real phases are small enough for the lean lane. As built, it saves about 6% of a small phase's
+tokens, so ceremony savings come to roughly 0.5% of total tokens. Rerouting small phases to
+`/gsd-quick` outright would be worth up to 7%, but needs core seam #3 (see
+[docs/stats.md](docs/stats.md) for the arithmetic). The bigger lever is point 2, cutting
 scope before it's built. That can't be estimated from history; the ledger will measure it.
 
 **4. It follows Musk's order, which is the part people get wrong.** They optimise first, then
@@ -68,6 +70,7 @@ automate, and only later notice the thing shouldn't exist. Musk runs the steps i
    gates cost tokens and never caught anything.
 
 **5. It is safe to leave on.**
+- Its ledger writes are locked and append-only, and its commits name only its own files.
 - Scope cuts are reversible: items move to v2 or the backlog, never into the void.
 - Every cut is logged with its original text, and reinstating one is a single command.
 - Security mitigations, locked decisions, your explicit asks and guarding tests are never cut.
@@ -91,7 +94,7 @@ installed, and it tells you when a manual step is due. Nothing else asks for you
 
 ```bash
 node ~/.claude/gsd-core/bin/gsd-tools.cjs capability install \
-  https://github.com/bitcreed/gsd-musk-simplification.git#v0.5.2 --scope global
+  https://github.com/bitcreed/gsd-musk-simplification.git#v0.5.3 --scope global
 node ~/.claude/gsd-core/bin/gsd-tools.cjs capability set musk --on --runtime claude   # stage the skills now
 ```
 

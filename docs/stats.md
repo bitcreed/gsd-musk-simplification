@@ -97,7 +97,10 @@ prior, because it is not separable (see caveats).
 | **Upper estimate** | 71.3M ÷ (157 phases × 6.87M = 1.08G) | **≈7%** |
 | Lower bound: lean lane only drops researcher + pattern-mapper | 11 × 6% of phase tokens × 6.87M + 0.7M | 5.6M ≈ **0.5%** |
 
-So the lean lane and plan merges alone are worth roughly **0.5–7%** of phase spend. The larger
+So the lean lane and plan merges alone are worth roughly **0.5–7%** of phase spend. The lean lane
+as built reaches only the lower bound: it skips questioning and research but still plans, executes
+and verifies. The upper row prices a real reroute to `/gsd-quick`, which needs core seam #3. Since
+0.5.3, `lib/pricing.cjs` prices a lean phase at 6% of `per_phase` accordingly. The larger
 lever is in the measured structure, not in this estimate. 60% of GSD tokens are non-executor,
 and planning costs 14% on its own, before any scope is cut. Scope cuts (a deleted requirement
 ≈ 1.04M, a deleted phase ≈ 6.87M) are not estimated here. Their frequency is unknown until musk

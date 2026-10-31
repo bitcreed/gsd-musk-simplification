@@ -1,7 +1,7 @@
 {
   "id": "musk",
   "role": "feature",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "title": "Musk subtraction pass",
   "description": "Applies Musk's algorithm (question requirements, delete, then simplify) to GSD planning: challenges milestones, requirements and implementation before they are built, routes small phases through the leanest workflow that will do, logs every cut in a ledger, and prices the savings from your real Claude Code token usage.",
   "tier": "full",
@@ -71,6 +71,7 @@
       "router": "routeMuskCommand",
       "subcommands": [
         "commit",
+        "record",
         "log",
         "reinstate",
         "confirm",
@@ -99,7 +100,7 @@
     {
       "point": "verify:post",
       "ref": {
-        "command": "musk stats --record"
+        "command": "musk record"
       },
       "produces": [],
       "consumes": [],

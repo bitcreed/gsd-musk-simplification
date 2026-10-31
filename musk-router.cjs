@@ -25,7 +25,7 @@ const { muskConfig } = require('./lib/config.cjs');
 const paths = require('./lib/paths.cjs');
 
 const VALUE_FLAGS = new Set(['class', 'unit', 'ref', 'reason', 'phase', 'point', 'status', 'qty', 'since', 'out', 'message']);
-const SUBS = ['commit', 'log', 'reinstate', 'confirm', 'list', 'pass', 'phase-check', 'milestone-check', 'audit', 'calibrate', 'stats'];
+const SUBS = ['commit', 'record', 'log', 'reinstate', 'confirm', 'list', 'pass', 'phase-check', 'milestone-check', 'audit', 'calibrate', 'stats'];
 
 function parseArgs(argv) {
   const flags = {};
@@ -89,20 +89,43 @@ function textCalibration(c, file) {
 }
 
 // Commit musk's own files the way every GSD step commits its docs: through `gsd-tools query
-// commit`, which applies commit_docs and skips cleanly when there is nothing to commit.
+// commit`, which applies commit_docs and skips cleanly when there is nothing to commit. It can
+// exit 0 and still report a failure, so the verdict comes from its JSON `reason`.
+const COMMIT_OK = /^(committed|nothing_to_commit|skipped_)/;
 function gsdCommit(cwd, message, files) {
   const main = require.main && require.main.filename;
   const tools = main && /gsd-tools\.cjs$/.test(main) ? main : path.join(os.homedir(), '.claude', 'gsd-core', 'bin', 'gsd-tools.cjs');
   const r = spawnSync(process.execPath, [tools, 'query', 'commit', message, '--files', ...files], { cwd, encoding: 'utf8', timeout: 60000 });
-  const out = `${r.stdout || ''}`;
-  const reason = (out.match(/"reason":\s*"([^"]+)"/) || [])[1] || (r.status === 0 ? 'committed' : 'failed');
-  return { ok: r.status === 0, reason };
+  return commitVerdict(r.status, `${r.stdout || ''}`, `${r.stderr || ''}`);
+}
+
+function commitVerdict(status, stdout, stderr = '') {
+  let res = null;
+  try { res = JSON.parse(stdout); } catch { /* text mode */ }
+  const reason = (res && res.reason) || (stdout.match(/"reason":\s*"([^"]+)"/) || [])[1] || stdout.trim().split('\n').pop() || (status === 0 ? 'committed' : 'failed');
+  const ok = status === 0 && COMMIT_OK.test(reason);
+  const error = ok ? undefined : ((res && res.error) || stderr.trim().split('\n').pop() || undefined);
+  return error ? { ok, reason, error } : { ok, reason };
+}
+
+// commit_docs as the INVOKING checkout sets it. musk state is committed in the main checkout, so
+// gsd-tools sees the main checkout's policy; a worktree or workstream that turned docs commits off
+// must not have musk commit them anyway.
+function commitDocsOff(d, P) {
+  for (const dir of new Set([P.rootPlanDir, P.planDir])) {
+    let cfg = {};
+    try { cfg = JSON.parse(d.fs.readFileSync(path.join(dir, 'config.json'), 'utf8')); } catch { continue; }
+    const v = cfg.commit_docs ?? (cfg.planning && cfg.planning.commit_docs);
+    if (v === false) return true;
+  }
+  return false;
 }
 
 function commitMusk(d, P, message) {
   const rel = path.relative(P.mainRoot, path.join(P.stateDir, 'musk')) || '.planning/musk';
   if (!d.fs.existsSync(path.join(P.stateDir, 'musk'))) return { ok: true, reason: 'nothing_to_commit' };
-  try { return d.commit(P.mainRoot, message, [rel + '/']); } catch (e) { return { ok: false, reason: e.message }; }
+  if (commitDocsOff(d, P)) return { ok: true, reason: 'skipped_commit_docs_false' };
+  try { return d.commit(P.mainRoot, message, [rel + '/']); } catch (e) { return { ok: false, reason: 'failed', error: e.message }; }
 }
 
 // milestone-check plus the settings in effect and `pass_due`: the milestone pass never ran, it is
@@ -146,33 +169,42 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   }
 
   if (sub === 'log') {
-    const rows = ledger.readLedger(d, stateDir);
-    const { row, error: err } = ledger.buildCut(rows, flags, now());
+    const { row, error: err } = ledger.withLock(d, stateDir, () => {
+      const r = ledger.buildCut(ledger.readLedger(d, stateDir), flags, now());
+      if (r.row) ledger.append(d, stateDir, r.row);
+      return r;
+    });
     if (err) return fail(err);
-    ledger.append(d, stateDir, row);
     return emit(row, row.id);
   }
 
   if (sub === 'confirm') {
     // Append-only, like reinstate: never rewrite a cut row.
-    const rows = ledger.readLedger(d, planDir);
     if (!pos.length) return fail('usage: musk confirm <id>... [--reason <text>]');
-    const added = [];
-    for (const id of pos) {
-      const { row, error: err } = ledger.buildConfirm(rows, id, flags.reason, now());
-      if (err) return fail(err);
-      ledger.append(d, planDir, row);
-      rows.push(row);
-      added.push(row);
-    }
+    // All ids are checked before any row is written, so a typo confirms nothing.
+    const { added, error: err } = ledger.withLock(d, stateDir, () => {
+      const rows = ledger.readLedger(d, stateDir);
+      const out = [];
+      for (const id of pos) {
+        const r = ledger.buildConfirm(rows, id, flags.reason, now());
+        if (r.error) return { error: r.error };
+        rows.push(r.row);
+        out.push(r.row);
+      }
+      out.forEach((row) => ledger.append(d, stateDir, row));
+      return { added: out };
+    });
+    if (err) return fail(err);
     return emit(added, added.map((r) => `${r.id} confirmed`).join('\n'));
   }
 
   if (sub === 'reinstate') {
-    const rows = ledger.readLedger(d, stateDir);
-    const { row, error: err } = ledger.buildReinstate(rows, pos[0], flags.reason, now());
+    const { row, error: err } = ledger.withLock(d, stateDir, () => {
+      const r = ledger.buildReinstate(ledger.readLedger(d, stateDir), pos[0], flags.reason, now());
+      if (r.row) ledger.append(d, stateDir, r.row);
+      return r;
+    });
     if (err) return fail(err);
-    ledger.append(d, stateDir, row);
     return emit(row, `${row.id} reinstated`);
   }
 
@@ -187,7 +219,7 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   if (sub === 'pass') {
     const { row, error: err } = ledger.buildPass(flags, now());
     if (err) return fail(err);
-    ledger.append(d, stateDir, row);
+    ledger.withLock(d, stateDir, () => ledger.append(d, stateDir, row));
     return emit(row, `musk: pass recorded for phase ${row.phase}`);
   }
 
@@ -244,7 +276,9 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     return emit(c, textCalibration(c, file));
   }
 
-  // stats
+  // stats; `record` is the verify:post step (`stats --record` before 0.5.3: a manifest command
+  // may not carry flags, so that form was rejected by conforming hosts).
+  if (sub === 'record') flags.record = true;
   let calibration = cal.readCalibration(d, stateDir);
   if (flags.record) {
     // [inferred] verify:post refreshes calibration first so the snapshot measures the phase that
@@ -256,7 +290,7 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   const s = computeStats(d, rows, calibration, { phase: flags.phase });
   if (flags.record) {
     const snap = snapshotRow(s, s.phase ? auditPhase(d, planDir, s.phase) : null, calibration, now());
-    ledger.append(d, stateDir, snap);
+    ledger.withLock(d, stateDir, () => ledger.append(d, stateDir, snap));
     // The verify:post step runs this with --raw into the orchestrator's context on every phase,
     // so it prints one line whatever the output mode.
     const pending = ledger.cuts(rows).filter((c) => c.unreviewed).length;
@@ -273,7 +307,7 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   return emit(s, textStats(s));
 }
 
-module.exports = { routeMuskCommand, parseArgs };
+module.exports = { routeMuskCommand, parseArgs, commitVerdict };
 
 if (require.main === module) {
   // Standalone: node musk-router.cjs <sub> [...] [--cwd <project>]

@@ -91,3 +91,79 @@ test('musk commit and stats --record commit .planning/musk through gsd-tools', (
     ['docs(musk): phase 3 measurements', ['.planning/musk/']],
   ]);
 });
+
+test('record is the verify:post step: same as stats --record', () => {
+  const ctx = setup('proj');
+  const out = run(ctx, ['record', '--phase', '3'], { json: false });
+  assert.match(out, /^musk: net /);
+  const rows = fs.readFileSync(path.join(ctx.cwd, '.planning/musk/ledger.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.equal(rows.at(-1).type, 'snapshot');
+  assert.equal(ctx.commits.at(-1).message, 'docs(musk): phase 3 measurements');
+});
+
+test('every manifest step command passes gsd-core\'s ref.command grammar and names a real subcommand', () => {
+  // loop-hook-dispatch.md: a host skips any command not matching this; no flags allowed.
+  const GRAMMAR = /^[a-z][a-z0-9-]*( [a-z][a-z0-9-]*)*$/;
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'capability.json'), 'utf8'));
+  const subs = manifest.commands.find((c) => c.family === 'musk').subcommands;
+  const cmds = manifest.steps.filter((s) => s.ref.command).map((s) => s.ref.command);
+  assert.ok(cmds.length >= 2);
+  for (const c of cmds) {
+    assert.match(c, GRAMMAR, c);
+    const [family, sub] = c.split(' ');
+    assert.equal(family, 'musk');
+    assert.ok(subs.includes(sub), `${sub} listed in manifest subcommands`);
+  }
+});
+
+test('append after a torn last line keeps the new row readable', () => {
+  const ctx = setup('proj');
+  const ledgerFile = path.join(ctx.cwd, '.planning/musk/ledger.jsonl');
+  fs.mkdirSync(path.dirname(ledgerFile), { recursive: true });
+  fs.writeFileSync(ledgerFile, '{"id":"M-0001","type":"cut","cl');
+  const r = run(ctx, cut());
+  assert.deepEqual(run(ctx, ['list']).map((c) => c.id), [r.id]);
+});
+
+test('confirm checks every id before writing any row', () => {
+  const ctx = setup('proj');
+  const ledgerFile = path.join(ctx.cwd, '.planning/musk/ledger.jsonl');
+  fs.rmSync(ledgerFile, { force: true });
+  const a = run(ctx, cut(['--inferred']));
+  const before = fs.readFileSync(ledgerFile, 'utf8');
+  assert.throws(() => run(ctx, ['confirm', a.id, 'M-9999']), /no cut/);
+  assert.equal(fs.readFileSync(ledgerFile, 'utf8'), before);
+});
+
+test('parallel log processes get distinct ids (ledger lock)', async () => {
+  const { spawn } = require('node:child_process');
+  const ctx = setup('proj');
+  fs.rmSync(path.join(ctx.cwd, '.planning/musk/ledger.jsonl'), { force: true });
+  const router = path.join(__dirname, '..', 'musk-router.cjs');
+  const N = 8;
+  await Promise.all(Array.from({ length: N }, (_, i) => new Promise((resolve, reject) => {
+    const p = spawn(process.execPath, [router, ...cut([]).map((a) => (a === 'T-1' ? `T-${i}` : a)), '--cwd', ctx.cwd], { stdio: 'ignore' });
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`exit ${code}`))));
+  })));
+  const ids = run(ctx, ['list']).map((c) => c.id);
+  assert.equal(ids.length, N);
+  assert.equal(new Set(ids).size, N);
+  assert.ok(!fs.existsSync(path.join(ctx.cwd, '.planning/musk/.ledger.lock')), 'lock released');
+});
+
+test('commit verdict reads gsd-tools\' JSON reason, not just the exit status', () => {
+  const { commitVerdict } = require('../musk-router.cjs');
+  assert.deepEqual(commitVerdict(0, '{"committed":true,"reason":"committed"}'), { ok: true, reason: 'committed' });
+  assert.deepEqual(commitVerdict(0, '{"committed":false,"reason":"nothing_to_commit"}'), { ok: true, reason: 'nothing_to_commit' });
+  assert.deepEqual(commitVerdict(0, '{"committed":false,"reason":"skipped_commit_docs_false"}'), { ok: true, reason: 'skipped_commit_docs_false' });
+  assert.deepEqual(commitVerdict(0, '{"committed":false,"reason":"commit_failed","error":"hook rejected"}'), { ok: false, reason: 'commit_failed', error: 'hook rejected' });
+  assert.equal(commitVerdict(1, '', 'boom').ok, false);
+});
+
+test('musk commit honours commit_docs: false in the invoking checkout', () => {
+  const ctx = setup('proj');
+  run(ctx, cut());
+  fs.writeFileSync(path.join(ctx.cwd, '.planning/config.json'), JSON.stringify({ planning: { commit_docs: false } }));
+  assert.equal(run(ctx, ['commit']).reason, 'skipped_commit_docs_false');
+  assert.equal((ctx.commits || []).length, 0);
+});
