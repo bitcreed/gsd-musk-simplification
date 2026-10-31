@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Regenerates the numbers in STATS.md from real GSD projects (read-only).
+// Regenerates the numbers in docs/stats.md from real GSD projects (read-only).
 //   node scripts/real-world-stats.cjs <project-dir>... [--json]
 // Output is anonymised: projects are labelled by letter, language and phase count, never by path.
 

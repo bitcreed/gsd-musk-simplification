@@ -35,7 +35,7 @@ before planning, before executing.
 **2. Deletion is the cheapest optimisation there is.** A requirement cut before discuss costs
 nothing, while the same requirement built costs its share of a whole phase: discuss, research,
 plans, checks, execution, verification, review and UAT. Measured across 14 real GSD projects
-(699M tokens, [STATS.md](STATS.md)), the medians are:
+(699M tokens, [docs/stats.md](docs/stats.md)), the medians are:
 
 | Unit | Median cost |
 |---|---|
@@ -56,7 +56,7 @@ a hundred phases of it, and one deferred requirement pays for about a thousand.
 **lean lane** gives small phases the flow they deserve: no questioning, no researcher, one plan.
 The planner rules stop 1-task plans from being written at all. Honest sizing: only about 7% of
 real phases are small enough for the lean lane. The ceremony savings alone come to roughly
-0.5–7% of total tokens (see STATS.md for the arithmetic). The bigger lever is point 2, cutting
+0.5–7% of total tokens (see [docs/stats.md](docs/stats.md) for the arithmetic). The bigger lever is point 2, cutting
 scope before it's built. That can't be estimated from history; the ledger will measure it.
 
 **4. It follows Musk's order, which is the part people get wrong.** They optimise first, then
@@ -76,7 +76,7 @@ automate, and only later notice the thing shouldn't exist. Musk runs the steps i
 
 **Month 1, measured.** On 10 projects over four weeks (474M tokens), musk's estimated net saving was
 **3.8% of spend for the median project** and 8.2% in aggregate, at a cost of about 1% of spend.
-Of 208 cuts reviewed at retros, 14.4% were restored. Details: [STATS.md](STATS.md#month-1-in-use-2026-09-29-to-2026-10-24).
+Of 208 cuts reviewed at retros, 14.4% were restored. Details: [docs/stats.md](docs/stats.md#month-1-in-use-2026-09-29-to-2026-10-24).
 
 **6. It measures itself honestly.** Every cut is priced from **your own** token usage, parsed
 from this project's Claude Code transcripts. Prices are p25–p75 ranges, labelled `harness`
@@ -168,6 +168,6 @@ ranges rather than a single number.
 
 ## Design
 
-See [DESIGN.md](DESIGN.md) for the hook map, why each hook sits where it does (verified against gsd-core since 1.15),
-the ledger schema and the pricing model. [CORE-SEAMS.md](CORE-SEAMS.md) lists the gsd-core
+See [docs/design.md](docs/design.md) for the hook map, why each hook sits where it does (verified against gsd-core since 1.15),
+the ledger schema and the pricing model. [docs/core-seams.md](docs/core-seams.md) lists the gsd-core
 changes that would let this go further.

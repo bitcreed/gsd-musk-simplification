@@ -2,13 +2,13 @@
 
 musk is a GSD Core capability: `capability.json` declares hooks; `fragments/` are injected into
 GSD prompts; `skills/` become `/gsd-musk-*`; `musk-router.cjs` + `lib/` are the `gsd-tools musk`
-command family. Read DESIGN.md before moving a hook, CORE-SEAMS.md before working around gsd-core.
+command family. Read docs/design.md before moving a hook, docs/core-seams.md before working around gsd-core.
 
 ## Rules
 
 - **Public repo, private data.** Never name a real project, or anything from inside one
   (requirement IDs, file paths, product terms), in files, comments, tests, commit messages or
-  upstream proposals. Real-world numbers go in STATS.md with anonymous labels (P1, P2, …).
+  upstream proposals. Real-world numbers go in docs/stats.md with anonymous labels (P1, P2, …).
   Before every commit, grep the tree and the commit message for project names.
 - **Every injected word costs tokens on every phase.** `stats` charges fragment size to musk's
   own pass cost. Keep fragments terse; put procedures in skills, which load only when invoked.

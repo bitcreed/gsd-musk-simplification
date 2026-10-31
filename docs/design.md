@@ -125,7 +125,7 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
   `per_task`, `per_plan_overhead` (least-squares fit of executor tokens = a + b·tasks),
   `per_phase` (all attributed tokens of a phase), `per_quick_task`, `per_req`
   (per_phase / reqs in phase), each as `{p25,p50,p75,n}`.
-- Priors (used when a price is `null`, always labelled `basis: "prior"`; rounded pooled p50s from 14 real GSD projects, see STATS.md): per_task 110k,
+- Priors (used when a price is `null`, always labelled `basis: "prior"`; rounded pooled p50s from 14 real GSD projects, see [stats.md](stats.md)): per_task 110k,
   per_plan_overhead 60k (not separable in real data yet), per_phase 7M, per_quick_task 450k, per_req 1M. These are rough
   and exist only so a fresh project shows an order of magnitude.
 
