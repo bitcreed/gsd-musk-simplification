@@ -32,6 +32,15 @@ function repoWithWorktree() {
 
 test('phase-check: no record -> prints the pass; pass row -> recorded', () => {
   const ctx = setup('proj');
+  // No milestone marker yet: phase-check first asks for the milestone pass.
+  const due = run(ctx, ['phase-check', '--phase', '4']);
+  assert.equal(due.action, 'run-milestone-pass');
+  assert.match(due.instructions, /^musk: the milestone pass never ran\. .*gsd-musk-roadmap/);
+  const marker = run(ctx, ['milestone-check']).marker;
+  fs.mkdirSync(path.join(ctx.cwd, path.dirname(marker)), { recursive: true });
+  fs.writeFileSync(path.join(ctx.cwd, marker), 'done\n');
+  assert.equal(run(ctx, ['milestone-check']).pass_due, false);
+
   const miss = run(ctx, ['phase-check', '--phase', '4']);
   assert.equal(miss.recorded, false);
   assert.equal(miss.action, 'run-pass');

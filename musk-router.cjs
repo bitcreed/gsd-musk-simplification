@@ -86,6 +86,20 @@ function textCalibration(c, file) {
   return lines.join('\n');
 }
 
+// milestone-check plus the settings in effect and `pass_due`: the milestone pass never ran, it is
+// enabled, and unstarted phases remain for it to trim.
+function milestoneStatus(d, planDir, stateDir, rootPlanDir, root) {
+  const mc = planning.milestoneCheck(d, planDir, stateDir, root);
+  const config = muskConfig(d, planDir, rootPlanDir);
+  // A phase ticked `[x]` in ROADMAP.md (done or superseded) has nothing left to trim.
+  let roadmap = '';
+  try { roadmap = d.fs.readFileSync(path.join(planDir, 'ROADMAP.md'), 'utf8'); } catch { /* none */ }
+  const ticked = new Set([...roadmap.matchAll(/^\s*[-*]\s*\[[xX]\].*?\bPhase\s+(\d+(?:\.\d+)*)/gm)].map((m) => planning.normPhase(m[1])));
+  const unstarted = mc.phases.filter((p) => !mc.phases_started.includes(p) && !ticked.has(p));
+  const passDue = Boolean(mc.milestone) && !mc.marker_exists && unstarted.length > 0 && config.milestone_pass !== false && config.enabled !== false;
+  return { ...mc, pass_due: passDue, config };
+}
+
 function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   const d = makeDeps(deps);
   const fail = (msg) => {
@@ -158,6 +172,10 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     const config = muskConfig(d, planDir, rootPlanDir);
     if (config.enabled === false) return emit({ phase, recorded: null, action: 'none' }, 'musk: disabled');
     if (!phase) return emit({ phase: flags.phase ?? null, recorded: null, action: 'none' }, `musk: no phase check for ${flags.phase ?? '(none)'}`);
+    // The milestone pass is due here too: discuss is optional, and a project planned straight from
+    // its roadmap would otherwise never get it (the verify:post reminder only reaches the user).
+    const ms = milestoneStatus(d, planDir, stateDir, rootPlanDir, root);
+    const msLine = ms.pass_due ? `musk: the milestone pass never ran. Before anything else, invoke skill \`gsd-musk-roadmap\` with \`auto\`, then continue below.\n` : '';
     const rows = ledger.readLedger(d, stateDir);
     let evidence = ledger.passRecorded(rows, phase) ? 'ledger' : null;
     if (!evidence) {
@@ -165,7 +183,7 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
       const ctxFile = pd && (() => { try { return d.fs.readdirSync(pd.dir).find((f) => /CONTEXT\.md$/.test(f)); } catch { return null; } })();
       if (ctxFile && /\bmusk\b/i.test(d.fs.readFileSync(path.join(pd.dir, ctxFile), 'utf8'))) evidence = 'context';
     }
-    if (evidence) return emit({ phase, recorded: true, evidence, action: 'none' }, `musk: pass recorded for phase ${phase}`);
+    if (evidence) return emit({ phase, recorded: true, evidence, action: ms.pass_due ? 'run-milestone-pass' : 'none' }, `${msLine}musk: pass recorded for phase ${phase}`);
     let frag = '';
     try { frag = d.fs.readFileSync(path.join(d.capRoot, 'fragments', 'discuss-pre.md'), 'utf8').trim(); } catch { /* missing fragment: the instruction alone */ }
     const text = [
@@ -173,11 +191,11 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
       frag,
       `When done (also when nothing was cut): gsd-tools musk pass --phase ${phase} --point plan:pre`,
     ].filter(Boolean).join('\n');
-    return emit({ phase, recorded: false, evidence: null, action: 'run-pass', instructions: text }, text);
+    return emit({ phase, recorded: false, evidence: null, action: ms.pass_due ? 'run-milestone-pass' : 'run-pass', milestone_pass_due: ms.pass_due, instructions: msLine + text }, msLine + text);
   }
 
   if (sub === 'milestone-check') {
-    const r = { ...planning.milestoneCheck(d, planDir, stateDir, root), config: muskConfig(d, planDir, rootPlanDir) };
+    const r = milestoneStatus(d, planDir, stateDir, rootPlanDir, root);
     return emit(r, Object.entries(r).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v && typeof v === 'object' ? Object.entries(v).map(([a, b]) => `${a}=${b}`).join(' ') : v}`).join('\n'));
   }
 
