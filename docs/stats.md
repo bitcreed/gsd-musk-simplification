@@ -115,7 +115,7 @@ Projects are labelled by spend rank.
 
 | Project | Spend | Cuts | Restored | Est. net p50 | Net ÷ spend | musk's own cost ÷ spend | Basis |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| P1 | 176M | 84 | 15 | 17.2M | 9.7% | 0.8% | harness |
+| P1 | 176M | 84 | 15 | 12.5M³ | 7.1% | 0.8% | harness |
 | P2 | 70M | 20 | 3 | 1.9M | 2.7% | 0.5% | harness |
 | P3 | 67M | 24 | 2 | 0.5M | 0.7% | <0.1% | harness |
 | P4 | 41M | 13 | 0 | 13.0M | 31.6%¹ | 0.7% | harness |
@@ -125,11 +125,14 @@ Projects are labelled by spend rank.
 | P8 | 9M | 2 | 0 | 0.4M | 4.1% | 0.7% | prior |
 | P9 | 9M | 5 | 0 | 1.2M | 13.7% | 0 | prior |
 | P10 | 9M | 4 | 0 | 0.1M | 1.6% | 0.9% | harness |
-| **All** | **474M** | **226** | **30** | **38.6M** | **8.2%** aggregate, **3.8%** median | **1.0%** | |
+| **All** | **474M** | **226** | **30** | **33.9M** | **7.2%** aggregate, **3.8%** median | **1.0%** | |
 
 ¹ Inflated: two plan steps were logged as `phase-merge` (priced at 35% of a phase each) and two
 plan-level features at milestone level. Without them P4 is about 9%.
 ² Includes the cost of its retro, which reviewed 31 cuts.
+³ Corrected in 0.5.3: its one lean-lane phase was priced as a whole phase rerouted to `/gsd-quick`
+(5.0M) instead of the researcher and pattern mapping it actually skipped (0.33M). v0.5 reported 17.2M
+and an 8.2% aggregate.
 
 **Review.** Seven projects (P1–P6, P8) ran `/gsd-musk-retro`. The retro reinstated cuts that git
 history showed were rebuilt, confirmed the ones that held, and asked the user about scope cuts.
@@ -145,12 +148,15 @@ The first two are now on the planner's never-cut list (v0.4.5).
 
 **What the month showed:**
 - **Typical saving about 4% of spend**, with a long tail to about 10% on projects with roadmap
-  bloat. musk's own cost is about 1% of spend, so it pays for itself about 4–8×.
+  bloat. musk's own cost is about 1% of spend, so it pays for itself about 4–7×.
 - **Most of the value is scope and implementation cuts.** The lean lane fired once in a month,
   consistent with the 7% eligibility estimate above.
-- **Reminders depend on the verify:post step, which runs unreliably.** One project recorded 3
+- **Reminders depend on the verify:post step, which rarely ran.** One project recorded 3
   snapshots for 24 verified phases, another 20 for 40. In one project, 5 milestones closed without
-  the retro reminder ever firing. This is the case for a core milestone hook (CORE-SEAMS #4).
+  the retro reminder ever firing. The cause was musk's: the step was `musk stats --record`, and
+  gsd-core only runs step commands without flags, so the runs that happened were agents skipping
+  that check. 0.5.3 renamed it `musk record`. A core milestone hook (CORE-SEAMS #4) would still
+  make the retro reminder independent of phase verification.
 
 ## Method and caveats
 
