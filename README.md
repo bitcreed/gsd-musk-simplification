@@ -78,7 +78,7 @@ automate, and only later notice the thing shouldn't exist. Musk runs the steps i
 - Unattended cuts are marked `inferred` and come up for review at the retro.
 
 **Month 1, measured.** On 10 projects over four weeks (474M tokens), musk's estimated net saving was
-**3.8% of spend for the median project** and 7.2% in aggregate, at a cost of about 1% of spend.
+**5.7% of spend for the median project** and 7.8% in aggregate, at a cost of about 0.4% of spend.
 Of 208 cuts reviewed at retros, 14.4% were restored. Details: [docs/stats.md](docs/stats.md#month-1-in-use-2026-09-29-to-2026-10-24).
 
 **6. It measures itself honestly.** Every cut is priced from **your own** token usage, parsed
@@ -94,7 +94,7 @@ installed, and it tells you when a manual step is due. Nothing else asks for you
 
 ```bash
 node ~/.claude/gsd-core/bin/gsd-tools.cjs capability install \
-  https://github.com/bitcreed/gsd-musk-simplification.git#v0.5.3 --scope global
+  https://github.com/bitcreed/gsd-musk-simplification.git#v0.5.4 --scope global
 node ~/.claude/gsd-core/bin/gsd-tools.cjs capability set musk --on --runtime claude   # stage the skills now
 ```
 

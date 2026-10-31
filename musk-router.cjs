@@ -233,7 +233,10 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     // The milestone pass is due here too: discuss is optional, and a project planned straight from
     // its roadmap would otherwise never get it (the verify:post reminder only reaches the user).
     const ms = milestoneStatus(d, planDir, stateDir, rootPlanDir, root);
-    const msLine = ms.pass_due ? `musk: the milestone pass never ran. Before anything else, invoke skill \`gsd-musk-roadmap\` with \`auto\`, then continue below.\n` : '';
+    // The host read this phase's requirement IDs before the planner started and hands the same
+    // list to the plan checker and the coverage gate, so a requirement deferred from here would be
+    // flagged as missing. At plan time this phase's requirement cuts are therefore proposals only.
+    const msLine = ms.pass_due ? `musk: the milestone pass never ran. Before anything else, invoke skill \`gsd-musk-roadmap\` with \`auto\`, but leave phase ${phase}'s own requirements in place (log their cuts with --status proposed), then continue below.\n` : '';
     const rows = ledger.readLedger(d, stateDir);
     let evidence = ledger.passRecorded(rows, phase) ? 'ledger' : null;
     if (!evidence) {
@@ -245,7 +248,7 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     let frag = '';
     try { frag = d.fs.readFileSync(path.join(d.capRoot, 'fragments', 'discuss-pre.md'), 'utf8').trim(); } catch { /* missing fragment: the instruction alone */ }
     const text = [
-      `musk: no subtraction pass recorded for phase ${phase}. Run it now, before you plan: cut first, then plan only what survives. CONTEXT.md already exists, so add the D-NN [deferred] decisions to it. In \`ask\` mode nobody can be asked here: log the cuts with --status proposed and change nothing.`,
+      `musk: no subtraction pass recorded for phase ${phase}. Run it now, before you plan: cut first, then plan only what survives. CONTEXT.md already exists, so add the D-NN [deferred] decisions to it. The plan checker and the coverage gate will still demand every requirement ID this phase started with, so log requirement cuts with --status proposed and leave REQUIREMENTS.md and the ROADMAP Requirements line unchanged; other cuts apply per the mode. In \`ask\` mode nobody can be asked here: log every cut with --status proposed and change nothing.`,
       frag,
       `When done (also when nothing was cut): gsd-tools musk pass --phase ${phase} --point plan:pre`,
     ].filter(Boolean).join('\n');

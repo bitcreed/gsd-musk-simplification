@@ -35,7 +35,7 @@ test('phase-check: no record -> prints the pass; pass row -> recorded', () => {
   // No milestone marker yet: phase-check first asks for the milestone pass.
   const due = run(ctx, ['phase-check', '--phase', '4']);
   assert.equal(due.action, 'run-milestone-pass');
-  assert.match(due.instructions, /^musk: the milestone pass never ran\. .*gsd-musk-roadmap/);
+  assert.match(due.instructions, /^musk: the milestone pass never ran\. .*gsd-musk-roadmap.*leave phase 4's own requirements in place/);
   const marker = run(ctx, ['milestone-check']).marker;
   fs.mkdirSync(path.join(ctx.cwd, path.dirname(marker)), { recursive: true });
   fs.writeFileSync(path.join(ctx.cwd, marker), 'done\n');
@@ -44,6 +44,8 @@ test('phase-check: no record -> prints the pass; pass row -> recorded', () => {
   const miss = run(ctx, ['phase-check', '--phase', '4']);
   assert.equal(miss.recorded, false);
   assert.equal(miss.action, 'run-pass');
+  // the host's requirement list is fixed by plan time: requirement cuts can only be proposed here
+  assert.match(miss.instructions, /log requirement cuts with --status proposed/);
   assert.match(miss.instructions, /no subtraction pass recorded for phase 4/);
   assert.match(miss.instructions, /d{20}/); // the discuss:pre fragment text rides along
   assert.match(miss.instructions, /musk pass --phase 4 --point plan:pre/);

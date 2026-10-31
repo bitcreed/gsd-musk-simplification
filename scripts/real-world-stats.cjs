@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const planning = require('../lib/planning.cjs');
-const { scan, transcriptDir } = require('../lib/transcripts.cjs');
+const { scan, transcriptDirs } = require('../lib/transcripts.cjs');
 const { mergeCandidates } = require('../lib/audit.cjs');
 const { quantile, summary, fit } = require('../lib/calibrate.cjs');
 const { effectivePrices, priceCut } = require('../lib/pricing.cjs');
@@ -50,7 +50,7 @@ function shape(planDir) {
 
 // Token samples from this project's transcripts, attributed by lib/transcripts.cjs.
 function tokens(dir, planDir) {
-  const scanned = scan(deps, transcriptDir(deps, dir), { known: planning.knownPhases(deps, planDir) });
+  const scanned = scan(deps, transcriptDirs(deps, dir), { known: planning.knownPhases(deps, planDir) });
   if (!scanned || !scanned.records.length) return null;
   const recs = scanned.records;
   const byBucket = {}; const byPhase = {}; const phaseCR = {}; const byQuick = {}; const quickCR = {}; const perPlan = {}; const planCR = {};

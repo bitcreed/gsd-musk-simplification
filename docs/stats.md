@@ -115,17 +115,17 @@ Projects are labelled by spend rank.
 
 | Project | Spend | Cuts | Restored | Est. net p50 | Net ÷ spend | musk's own cost ÷ spend | Basis |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| P1 | 176M | 84 | 15 | 12.5M³ | 7.1% | 0.8% | harness |
-| P2 | 70M | 20 | 3 | 1.9M | 2.7% | 0.5% | harness |
-| P3 | 67M | 24 | 2 | 0.5M | 0.7% | <0.1% | harness |
+| P1 | 176M | 84 | 15 | 13.5M³ ⁴ | 7.7% | 0.2%⁴ | harness |
+| P2 | 70M | 20 | 3 | 1.9M | 2.8% | 0.5% | harness |
+| P3 | 67M | 24 | 2 | 0.4M | 0.6% | 0.2%⁴ | harness |
 | P4 | 41M | 13 | 0 | 13.0M | 31.6%¹ | 0.7% | harness |
-| P5 | 40M | 34 | 3 | 2.7M | 6.9% | 2.2% | harness |
-| P6 | 33M | 31 | 7 | 0.9M | 2.8% | 5.0%² | prior |
+| P5 | 40M | 34 | 3 | 3.2M | 8.0% | 0.9%⁴ | harness |
+| P6 | 33M | 31 | 7 | 2.4M | 7.3% | 0.5%² ⁴ | prior |
 | P7 | 21M | 9 | 0 | 0.7M | 3.6% | <0.1% | harness |
 | P8 | 9M | 2 | 0 | 0.4M | 4.1% | 0.7% | prior |
 | P9 | 9M | 5 | 0 | 1.2M | 13.7% | 0 | prior |
 | P10 | 9M | 4 | 0 | 0.1M | 1.6% | 0.9% | harness |
-| **All** | **474M** | **226** | **30** | **33.9M** | **7.2%** aggregate, **3.8%** median | **1.0%** | |
+| **All** | **474M** | **226** | **30** | **36.9M** | **7.8%** aggregate, **5.7%** median | **0.4%** | |
 
 ¹ Inflated: two plan steps were logged as `phase-merge` (priced at 35% of a phase each) and two
 plan-level features at milestone level. Without them P4 is about 9%.
@@ -133,6 +133,13 @@ plan-level features at milestone level. Without them P4 is about 9%.
 ³ Corrected in 0.5.3: its one lean-lane phase was priced as a whole phase rerouted to `/gsd-quick`
 (5.0M) instead of the researcher and pattern mapping it actually skipped (0.33M). v0.5 reported 17.2M
 and an 8.2% aggregate.
+⁴ Corrected in 0.5.4: musk's own cost was overstated. A musk skill run was charged with all the
+host work that followed it until the next GSD command; in P6 that was a whole day of unrelated work
+after one roadmap pass, which the earlier footnote ² took for retro cost. Each project's own cost
+was re-measured over the same window with the old and the new attribution and the difference
+applied (P1 −1.0M, P5 −0.5M, P6 −1.5M; P3 +0.07M, as runs where the fragments were actually
+injected now count before the first ledger row). Gross savings are unchanged. v0.5.3 reported
+33.9M net, a 7.2% aggregate and an own cost of 1.0%.
 
 **Review.** Seven projects (P1–P6, P8) ran `/gsd-musk-retro`. The retro reinstated cuts that git
 history showed were rebuilt, confirmed the ones that held, and asked the user about scope cuts.
@@ -147,8 +154,8 @@ healthy. What came back:
 The first two are now on the planner's never-cut list (v0.4.5).
 
 **What the month showed:**
-- **Typical saving about 4% of spend**, with a long tail to about 10% on projects with roadmap
-  bloat. musk's own cost is about 1% of spend, so it pays for itself about 4–7×.
+- **Typical saving about 6% of spend**, with a long tail to about 14% on projects with roadmap
+  bloat. musk's own cost is about 0.4% of spend, so on these estimates it pays for itself about 20×.
 - **Most of the value is scope and implementation cuts.** The lean lane fired once in a month,
   consistent with the 7% eligibility estimate above.
 - **Reminders depend on the verify:post step, which rarely ran.** One project recorded 3

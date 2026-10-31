@@ -16,7 +16,7 @@ records the answer so the savings can be measured.
 |---|---|---|---|
 | Milestone | `discuss:pre` and the `plan:pre` safety net (gated by `musk.milestone_pass`; run when `milestone-check` reports `pass_due`) + manual `/gsd-musk-roadmap` | contribution → orchestrator, skill | Challenge every remaining phase and REQ of the milestone: delete, defer, merge. |
 | Requirements | `discuss:pre` | contribution → orchestrator | Owner check: every REQ in the phase traces to a source (user, PROJECT.md, ADR). Ownerless → scope cut, recorded in CONTEXT.md as a `[deferred]` decision when CONTEXT.md is written. Ends with `musk pass --phase N` (a `pass` row, cuts or not). |
-| Safety net | `plan:pre` | contribution → planner (first line of the planner rules; `plan:pre` has no orchestrator role) | `musk phase-check --phase N`: one line when the phase has a pass record; otherwise it prints the discuss:pre text so the planner runs the pass before it plans (in `ask` mode it only proposes). When the milestone pass is due, it first tells the planner to run `gsd-musk-roadmap auto`. Catches phases planned without discuss, or whose discuss never rendered hooks. |
+| Safety net | `plan:pre` | contribution → planner (first line of the planner rules; `plan:pre` has no orchestrator role) | `musk phase-check --phase N`: one line when the phase has a pass record; otherwise it prints the discuss:pre text so the planner runs the pass before it plans. Requirement cuts are only proposed here: the host read the phase's requirement IDs before the planner started and gives that list to the plan checker and the coverage gate (core seam 9). In `ask` mode every cut is only proposed. When the milestone pass is due, it first tells the planner to run `gsd-musk-roadmap auto`. Catches phases planned without discuss, or whose discuss never rendered hooks. |
 | Phase ceremony | `discuss:pre` (gated by `musk.lean_lane`) | contribution → orchestrator | Small phase → lean lane: no gray-area questioning, a "research not needed" RESEARCH.md, one plan. |
 | Implementation + plan count | `plan:pre` | contribution → planner | Add nothing without a source. Fewest plans (≤3 tasks → one). Log omissions. (Also reaches `/gsd-quick`'s planner; `/gsd-quick-batch` renders no hooks, see CORE-SEAMS #8.) |
 | Commit | `execute:post` (phases and `/gsd-quick`) | step → command `musk commit` | Commit `.planning/musk/` through `gsd-tools query commit`, which applies `commit_docs`, so musk's files land in history when GSD commits its own. |
@@ -113,7 +113,8 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
 ### Calibration (Claude Code runtime)
 
 - Transcript dir: `~/.claude/projects/<slug>/` where slug = absolute project path with every
-  non-alphanumeric char replaced by `-`. Only this project's dir is read. Other runtimes →
+  non-alphanumeric char replaced by `-`. This project's dir is read, plus the dirs of Claude Code
+  worktrees under it (`<slug>--claude-worktrees-*`), which Claude Code files separately. Other runtimes →
   `calibration.json` with `basis: "none"`, stats fall back to priors.
 - Tokens per assistant message = `input_tokens + cache_creation_input_tokens + output_tokens`;
   `cache_read_input_tokens` reported separately (it is cheap, never mixed into the headline).
@@ -122,7 +123,14 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
   parent's `Agent` tool_use / tool_result) to `subagent_type` and — by parsing the spawn prompt —
   to phase (`phases/<NN>-…`) and plan (`<NN>-<PP>-PLAN.md`).
 - Attribute main-session tokens to the GSD command in effect (`<command-name>/gsd-…` user
-  messages), to catch orchestrator cost per phase.
+  messages or a `Skill` call), to catch orchestrator cost per phase. A musk run is bounded: it
+  ends after its `musk commit` call, or at a human message whose reply does no musk work (no
+  `gsd-tools musk` call, nothing written under `.planning/musk/`). Task notifications and
+  compaction summaries are not human messages. The interrupted command then resumes (a musk skill
+  invoked inside a command keeps its phase), so host work after a musk run is not charged to musk.
+  Agents spawned during a musk run are charged to it.
+- A quick task is one sample: the `/gsd-quick` segment plus every agent spawned inside it (and
+  their children), whatever quick id their prompts carry.
 - Derived prices (only when n ≥ 5 samples in this project, else `null`):
   `per_task`, `per_plan_overhead` (least-squares fit of executor tokens = a + b·tasks),
   `per_phase` (all attributed tokens of a phase), `per_quick_task`, `per_req`
@@ -150,6 +158,23 @@ Only `status: applied` and not-reinstated cuts count toward savings; proposed cu
 separately as "potential". A reinstated cut's price is subtracted from gross and counted in the
 add-back ratio (`reinstated / applied`).
 
-**Pass cost** = Σ fragment tokens (chars/4) × injections (one per discuss/plan run seen in the
-transcripts or the ledger), plus measured tokens of `musk-*` skill runs where attributable.
+**Pass cost** = Σ fragment tokens (chars/4) × the runs each fragment was injected into, plus
+measured tokens of `musk-*` skill runs where attributable. A discuss or planner run counts when a
+musk fragment tag (`<musk>`, `<musk_lean>`, `<musk_milestone>`) appears in its transcript, and
+only the fragments whose tags appear are charged, so runs from before musk was installed and
+fragments whose `when` was off cost nothing. The ledger fills in where transcripts are missing:
+one discuss run per `pass` row (or per phase with discuss-point cuts and no pass row), one plan
+run per phase with plan-point rows. Per phase the larger count wins. Calibrations written before
+0.5.4 have no tags; for those, runs before the first ledger row are ignored.
 Net = gross − pass cost. Every number carries its `basis` (`harness` | `prior`) and `n`.
+
+## Known limitations
+
+- **Workstream identity.** Pass rows match a phase by number and milestone markers by version or
+  name, without the workstream. Two workstreams that reuse a phase number or a milestone version
+  share them. Projects seen so far number phases across workstreams, so this has not happened.
+- **Roadmap formats.** Bracketed phase ids (`[DEMO.01] 01`) and requirement lists continued on the
+  lines below `**Requirements**:` are not parsed. Such phases get no pass detection or phase
+  attribution, and per-requirement prices use a smaller denominator.
+- **Phase-level `commit_docs`.** `musk commit` honours `commit_docs: false` in the checkout's and the
+  workstream's config, not a phase-level override, because `.planning/musk/` carries no phase.
