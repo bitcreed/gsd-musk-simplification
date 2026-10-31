@@ -32,6 +32,7 @@ function run(ctx, argv, { json = true, now = '2026-09-02T12:00:00.000Z', env = {
       now: () => new Date(now),
       stdout: (s) => { out += s; },
       capRoot: path.join(FIX, 'cap'),
+      commit: (cwd, message, files) => { (ctx.commits ||= []).push({ cwd, message, files }); return { ok: true, reason: 'committed' }; },
       env,
     },
   });

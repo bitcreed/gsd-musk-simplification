@@ -80,3 +80,14 @@ test('confirm appends rows and clears unreviewed; legacy confirmed fields count 
   fs.appendFileSync(ledgerFile, JSON.stringify({ id: 'M-0100', type: 'cut', class: 'impl', unit: 'task', status: 'applied', inferred: true, confirmed: '2026-10-24 retro' }) + '\n');
   assert.equal(run(ctx, ['list']).find((c) => c.id === 'M-0100').unreviewed, false);
 });
+
+test('musk commit and stats --record commit .planning/musk through gsd-tools', () => {
+  const ctx = setup('proj');
+  run(ctx, ['log', '--class', 'impl', '--unit', 'task', '--ref', 'x', '--reason', 'y']);
+  assert.equal(run(ctx, ['commit'], { json: false }).trim(), 'musk: commit committed');
+  run(ctx, ['stats', '--record', '--phase', '3'], { json: false });
+  assert.deepEqual(ctx.commits.map((c) => [c.message, c.files]), [
+    ['docs(musk): ledger and calibration', ['.planning/musk/']],
+    ['docs(musk): phase 3 measurements', ['.planning/musk/']],
+  ]);
+});

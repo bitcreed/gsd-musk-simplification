@@ -19,7 +19,8 @@ records the answer so the savings can be measured.
 | Safety net | `plan:pre` | contribution → planner (first line of the planner rules; `plan:pre` has no orchestrator role) | `musk phase-check --phase N`: one line when the phase has a pass record; otherwise it prints the discuss:pre text so the planner runs the pass before it plans (in `ask` mode it only proposes). When the milestone pass is due, it first tells the planner to run `gsd-musk-roadmap auto`. Catches phases planned without discuss, or whose discuss never rendered hooks. |
 | Phase ceremony | `discuss:pre` (gated by `musk.lean_lane`) | contribution → orchestrator | Small phase → lean lane: no gray-area questioning, a "research not needed" RESEARCH.md, one plan. |
 | Implementation + plan count | `plan:pre` | contribution → planner | Add nothing without a source. Fewest plans (≤3 tasks → one). Log omissions. (Also reaches `/gsd-quick`'s planner; `/gsd-quick-batch` renders no hooks, see CORE-SEAMS #8.) |
-| Measurement | `verify:post` | step → command `musk stats --record` | Snapshot the phase's measured cost; print one line (net, unreviewed inferred cuts). |
+| Commit | `execute:post` (phases and `/gsd-quick`) | step → command `musk commit` | Commit `.planning/musk/` through `gsd-tools query commit`, which applies `commit_docs`, so musk's files land in history when GSD commits its own. |
+| Measurement | `verify:post` | step → command `musk stats --record` | Snapshot the phase's measured cost, commit it, print one line (net, unreviewed inferred cuts, a due manual step). |
 | Process (steps 4–5) | manual `/gsd-musk-retro` | skill | Add-back ratio, net savings, which gates/steps cost tokens and never caught anything → config suggestions. |
 
 ### Why not the places the original notes proposed

@@ -14,6 +14,9 @@ command family. Read DESIGN.md before moving a hook, CORE-SEAMS.md before workin
   own pass cost. Keep fragments terse; put procedures in skills, which load only when invoked.
 - **The ledger is append-only.** Never rewrite `.planning/musk/ledger.jsonl` rows; add a row type
   (`confirm`, `reinstate`, …) and fold it in `ledger.cuts()`. Keep reading older row shapes.
+- **Commit like GSD does.** Anything musk writes is committed at the same points GSD commits its
+  own docs: through `gsd-tools query commit` (`musk commit`, or a skill's final step), never left
+  for someone else to sweep up.
 - **Routers must be synchronous.** gsd-tools rejects a Promise-returning router.
 - **Inject dependencies.** All I/O goes through `deps` (`fs`, `homedir`, `now`, `stdout`), so tests
   run on fixtures. Fixtures are synthetic; never copy real transcripts or planning files in.

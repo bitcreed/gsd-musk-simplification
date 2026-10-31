@@ -11,6 +11,7 @@
  */
 
 const fs = require('node:fs');
+const { spawnSync } = require('node:child_process');
 const os = require('node:os');
 const path = require('node:path');
 
@@ -23,8 +24,8 @@ const { dueStep } = require('./lib/reminders.cjs');
 const { muskConfig } = require('./lib/config.cjs');
 const paths = require('./lib/paths.cjs');
 
-const VALUE_FLAGS = new Set(['class', 'unit', 'ref', 'reason', 'phase', 'point', 'status', 'qty', 'since', 'out']);
-const SUBS = ['log', 'reinstate', 'confirm', 'list', 'pass', 'phase-check', 'milestone-check', 'audit', 'calibrate', 'stats'];
+const VALUE_FLAGS = new Set(['class', 'unit', 'ref', 'reason', 'phase', 'point', 'status', 'qty', 'since', 'out', 'message']);
+const SUBS = ['commit', 'log', 'reinstate', 'confirm', 'list', 'pass', 'phase-check', 'milestone-check', 'audit', 'calibrate', 'stats'];
 
 function parseArgs(argv) {
   const flags = {};
@@ -50,6 +51,7 @@ function makeDeps(deps = {}) {
     capRoot: deps.capRoot || __dirname,
     env: deps.env || process.env,
     git: deps.git,
+    commit: deps.commit || gsdCommit,
   };
 }
 
@@ -86,6 +88,23 @@ function textCalibration(c, file) {
   return lines.join('\n');
 }
 
+// Commit musk's own files the way every GSD step commits its docs: through `gsd-tools query
+// commit`, which applies commit_docs and skips cleanly when there is nothing to commit.
+function gsdCommit(cwd, message, files) {
+  const main = require.main && require.main.filename;
+  const tools = main && /gsd-tools\.cjs$/.test(main) ? main : path.join(os.homedir(), '.claude', 'gsd-core', 'bin', 'gsd-tools.cjs');
+  const r = spawnSync(process.execPath, [tools, 'query', 'commit', message, '--files', ...files], { cwd, encoding: 'utf8', timeout: 60000 });
+  const out = `${r.stdout || ''}`;
+  const reason = (out.match(/"reason":\s*"([^"]+)"/) || [])[1] || (r.status === 0 ? 'committed' : 'failed');
+  return { ok: r.status === 0, reason };
+}
+
+function commitMusk(d, P, message) {
+  const rel = path.relative(P.mainRoot, path.join(P.stateDir, 'musk')) || '.planning/musk';
+  if (!d.fs.existsSync(path.join(P.stateDir, 'musk'))) return { ok: true, reason: 'nothing_to_commit' };
+  try { return d.commit(P.mainRoot, message, [rel + '/']); } catch (e) { return { ok: false, reason: e.message }; }
+}
+
 // milestone-check plus the settings in effect and `pass_due`: the milestone pass never ran, it is
 // enabled, and unstarted phases remain for it to trim.
 function milestoneStatus(d, planDir, stateDir, rootPlanDir, root) {
@@ -118,6 +137,13 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   const emit = (obj, text) => d.stdout((json ? JSON.stringify(obj, null, 2) : text) + '\n');
 
   if (!SUBS.includes(sub)) return fail(`unknown subcommand ${JSON.stringify(sub)}; expected one of ${SUBS.join(', ')}`);
+
+  if (sub === 'commit') {
+    // execute:post step (phases and /gsd-quick): sweeps the ledger rows and calibration written
+    // during planning and execution into history, as GSD does with its own artifacts.
+    const r = commitMusk(d, P, flags.message || 'docs(musk): ledger and calibration');
+    return emit(r, `musk: commit ${r.reason}`);
+  }
 
   if (sub === 'log') {
     const rows = ledger.readLedger(d, stateDir);
@@ -238,6 +264,9 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     let line = `musk: net ${fmtQ(s.net)}` + (pending ? `; ${pending} inferred cut(s) unreviewed` : '');
     if (due) line += `. NEXT STEP for the user: ${due.skill} (${due.why}). List it in the next steps you show.`;
     else if (pending) line += ', reviewed by /gsd-musk-retro at milestone end';
+    // verify:post: commit this phase's measurements with the rest of the phase's docs.
+    const c = commitMusk(d, P, `docs(musk): phase ${s.phase || '?'} measurements`);
+    if (!c.ok) line += ` (musk files not committed: ${c.reason})`;
     d.stdout(line + '\n');
     return;
   }
