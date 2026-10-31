@@ -8,7 +8,7 @@ missing question, **should this exist, and at what size?**, and asks it wherever
 
 | Level | When | What gets cut |
 |---|---|---|
-| Milestone | first discuss of a milestone (one-shot), or `/gsd-musk-roadmap` | whole phases (to backlog), merges, unowned requirements |
+| Milestone | first discuss or plan of a milestone (one-shot), or `/gsd-musk-roadmap` | whole phases (to backlog), merges, unowned requirements |
 | Requirements | every `discuss:pre`; again at `plan:pre` for any phase with no recorded pass | requirements and success criteria with no owner; over-broad ones narrowed |
 | Ceremony | every `discuss:pre` | small phases take the **lean lane**: short discuss, no researcher, one plan |
 | Implementation & plans | every `plan:pre` (also `/gsd-quick`, not `/gsd-quick-batch`) | tasks, flags, layers, shims, docs, tests nobody asked for; fewest plans (≤3 tasks → one plan) |
@@ -43,8 +43,8 @@ plans, checks, execution, verification, review and UAT. Measured across 14 real 
 | Requirement | 1.04M |
 | Phase | 6.9M |
 
-The pass costs about **900 tokens** of injected text per phase. So one deleted task pays for more
-than a hundred phases of it, and one deferred requirement pays for about a thousand.
+The pass costs about **1,000 tokens** of injected text per phase. So one deleted task pays for about
+a hundred phases of it, and one deferred requirement pays for about a thousand.
 
 **3. Ceremony is a fixed cost that doesn't scale down.** In the same data:
 - Executors, the agents that write the code, spend only **40%** of GSD's tokens. The other 60% is
@@ -168,6 +168,6 @@ ranges rather than a single number.
 
 ## Design
 
-See [DESIGN.md](DESIGN.md) for the hook map, why each hook sits where it does in gsd-core 1.15,
+See [DESIGN.md](DESIGN.md) for the hook map, why each hook sits where it does (verified against gsd-core since 1.15),
 the ledger schema and the pricing model. [CORE-SEAMS.md](CORE-SEAMS.md) lists the gsd-core
 changes that would let this go further.

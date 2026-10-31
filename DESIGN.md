@@ -10,13 +10,13 @@ test gaps, planners add defensive code, flags, abstractions. Nothing asks "shoul
 This capability asks that question at every planning level where GSD exposes a hook, and it
 records the answer so the savings can be measured.
 
-## Where it acts (verified against gsd-core 1.15 `next`)
+## Where it acts (verified against gsd-core since 1.15)
 
 | Level | Point / surface | Kind | What happens |
 |---|---|---|---|
-| Milestone | `discuss:pre` (gated by `musk.milestone_pass`; runs only when `milestone-check` says so) + manual `/gsd-musk-roadmap` | contribution → orchestrator, skill | Challenge every remaining phase and REQ of the milestone: delete, defer, merge. |
+| Milestone | `discuss:pre` and the `plan:pre` safety net (gated by `musk.milestone_pass`; run when `milestone-check` reports `pass_due`) + manual `/gsd-musk-roadmap` | contribution → orchestrator, skill | Challenge every remaining phase and REQ of the milestone: delete, defer, merge. |
 | Requirements | `discuss:pre` | contribution → orchestrator | Owner check: every REQ in the phase traces to a source (user, PROJECT.md, ADR). Ownerless → scope cut, recorded in CONTEXT.md as a `[deferred]` decision when CONTEXT.md is written. Ends with `musk pass --phase N` (a `pass` row, cuts or not). |
-| Safety net | `plan:pre` | contribution → planner (first line of the planner rules; `plan:pre` has no orchestrator role) | `musk phase-check --phase N`: one line when the phase has a pass record; otherwise it prints the discuss:pre text so the planner runs the pass before it plans (in `ask` mode it only proposes). Catches phases added mid-milestone whose discuss was skipped or hand-driven (v0.4: a subagent in a worktree read discuss-phase.md and never ran its `render-hooks` step). |
+| Safety net | `plan:pre` | contribution → planner (first line of the planner rules; `plan:pre` has no orchestrator role) | `musk phase-check --phase N`: one line when the phase has a pass record; otherwise it prints the discuss:pre text so the planner runs the pass before it plans (in `ask` mode it only proposes). When the milestone pass is due, it first tells the planner to run `gsd-musk-roadmap auto`. Catches phases planned without discuss, or whose discuss never rendered hooks. |
 | Phase ceremony | `discuss:pre` (gated by `musk.lean_lane`) | contribution → orchestrator | Small phase → lean lane: no gray-area questioning, a "research not needed" RESEARCH.md, one plan. |
 | Implementation + plan count | `plan:pre` | contribution → planner | Add nothing without a source. Fewest plans (≤3 tasks → one). Log omissions. (Also reaches `/gsd-quick`'s planner; `/gsd-quick-batch` renders no hooks, see CORE-SEAMS #8.) |
 | Measurement | `verify:post` | step → command `musk stats --record` | Snapshot the phase's measured cost; print one line (net, unreviewed inferred cuts). |
@@ -35,15 +35,15 @@ records the answer so the savings can be measured.
   move the REQ out of the phase (ROADMAP `Requirements:` line + REQUIREMENTS.md v2/Out of Scope).
 - Third-party `agents[]` are never staged, so all LLM work runs through skills or host roles.
 
-### v0.2: musk applied to itself
+### Left out on purpose
 
-Deleted: the `discuss:post` fragment (the discuss:pre text already governs the CONTEXT.md
+No `discuss:post` fragment (the discuss:pre text already governs the CONTEXT.md
 write), the `plan:post` `musk-audit` skill step (a skill load plus tool calls every phase to fix
 what the planner rule prevents; `/gsd-musk-retro` reports tiny plans via `musk audit` instead),
-and the `advise` ceremony mode. The milestone and lean-lane text moved into their own
-contributions gated by config, so disabled branches cost nothing. Injected text went from
-6.1k to 3.6k chars per phase, and the `verify:post` step prints one line instead of the full
-stats JSON.
+and no `advise` ceremony mode. The milestone and lean-lane text are separate contributions
+gated by config, so a disabled branch costs nothing, and the `verify:post` step prints one line
+instead of the stats JSON. musk applied to itself cut its injected text from 6.1k to 3.6k chars
+per phase.
 
 ## Rules the prompt surfaces encode
 
@@ -54,7 +54,8 @@ stats JSON.
    applied — it never removes a sourced requirement.
 2. **Recorded, never silent.** Every cut → one ledger row via `gsd-tools musk log`.
 3. **Never cut:** threat-model / security mitigations, locked decisions (`D-NN` in CONTEXT.md
-   the user made), tests that guard behaviour that remains, api-coverage rows (emit `OPT-OUT`
+   the user made), tests that guard behaviour that remains, corrections to docs that have become
+   wrong, contract or registry entries for new entry points, api-coverage rows (emit `OPT-OUT`
    with reason instead), anything the user explicitly asked for in this milestone.
 4. **Order:** delete before simplify. Never optimise what should have been deleted.
 5. **Add-back:** a reinstated cut is logged with `musk reinstate`. ~10% add-back is healthy;
@@ -62,14 +63,9 @@ stats JSON.
 6. **Budget:** the pass must cost less than it removes. Fragments stay short; `musk stats`
    reports net = gross − pass cost.
 
-## Config keys (federated, owned by this capability)
+## Config keys
 
-| Key | Type | Default | Meaning |
-|---|---|---|---|
-| `musk.enabled` | boolean | `true` | Activation key (gates every hook). Installing is the opt-in; `false` opts a project out. |
-| `musk.scope_cuts` | enum `defer\|propose\|ask` | `defer` | How scope cuts are applied. |
-| `musk.lean_lane` | boolean | `true` | Lean lane for small phases. |
-| `musk.milestone_pass` | boolean | `true` | Run the one-shot milestone subtraction at the first `discuss:pre` of a milestone. |
+Declared with types in `capability.json`; what each does is in the README's *Configure* table.
 
 ## Data files (in the project)
 

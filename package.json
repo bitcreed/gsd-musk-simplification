@@ -10,14 +10,5 @@
   },
   "scripts": {
     "test": "node --test test/*.test.cjs"
-  },
-  "files": [
-    "capability.json",
-    "musk-router.cjs",
-    "lib/",
-    "skills/",
-    "fragments/",
-    "DESIGN.md",
-    "README.md"
-  ]
+  }
 }

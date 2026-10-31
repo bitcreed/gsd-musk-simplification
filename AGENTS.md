@@ -8,7 +8,7 @@ command family. Read DESIGN.md before moving a hook, CORE-SEAMS.md before workin
 
 - **Public repo, private data.** Never name a real project, or anything from inside one
   (requirement IDs, file paths, product terms), in files, comments, tests, commit messages or
-  `upstream/` drafts. Real-world numbers go in STATS.md with anonymous labels (P1, P2, …).
+  upstream proposals. Real-world numbers go in STATS.md with anonymous labels (P1, P2, …).
   Before every commit, grep the tree and the commit message for project names.
 - **Every injected word costs tokens on every phase.** `stats` charges fragment size to musk's
   own pass cost. Keep fragments terse; put procedures in skills, which load only when invoked.

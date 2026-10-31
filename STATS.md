@@ -1,8 +1,9 @@
 # Real-world GSD cost stats
 
-Measured on 14 real GSD projects (12 with Claude Code transcripts), 2026-08-20 to 2026-09-29.
-These numbers describe **plain GSD**. Musk has not yet run on any real project, so nothing below
-is a measured saving. The last section is an **estimate** built from the measured cost structure.
+Measured on one developer's GSD projects. The first sections describe **plain GSD** before musk:
+14 projects (12 with Claude Code transcripts), 2026-08-20 to 2026-09-29, labelled A–N. *Month 1 in
+use* measures musk itself on 10 projects, labelled P1–P10; the two label sets are independent.
+Labels carry no project details on purpose.
 
 Regenerate: `node scripts/real-world-stats.cjs <project-dir>...` (read-only, zero deps, uses `lib/`).
 
@@ -13,14 +14,14 @@ Headline tokens = `input + cache_creation + output`. `cache_read` is reported se
 | Project | Executed task | Phase | Quick task | Requirement | Fit r² (exec ~ tasks) |
 | --- | --- | --- | --- | --- | --- |
 | **Pooled** | 90k / **112k** / 146k (n=465) | 3.70M / **6.87M** / 8.86M (n=56) | 287k / **455k** / 651k (n=228) | 639k / **1.04M** / 1.66M (n=56) | 0.139 (n=465) |
-| A (Rust, 28 phases) | 98k / **103k** / 118k (n=29) | 835k / **1.63M** / 5.99M (n=7) | 253k / **382k** / 550k (n=55) | 193k / **299k** / 678k (n=7) | 0.588 (n=29) |
-| B (Python, 23 phases) | 83k / **104k** / 137k (n=231) | 4.27M / **6.98M** / 8.60M (n=21) | 388k / **513k** / 823k (n=19) | 716k / **871k** / 1.60M (n=21) | 0.223 (n=231) |
-| C (Dart, 20 phases) | 75k / **90k** / 117k (n=15) | – (n=4) | – (n=3) | – (n=4) | 0.077 (n=15) |
-| E (Dart, 18 phases) | 95k / **112k** / 129k (n=16) | 6.58M / **6.97M** / 8.46M (n=6) | 203k / **287k** / 384k (n=7) | 1.18M / **1.94M** / 3.89M (n=6) | 0.01 (n=16) |
-| H (Python, 10 phases) | 102k / **134k** / 182k (n=124) | 8.90M / **10.32M** / 14.33M (n=8) | 277k / **458k** / 605k (n=61) | 1.31M / **1.57M** / 2.07M (n=8) | 0.048 (n=124) |
-| I (Python, 10 phases) | 103k / **128k** / 150k (n=46) | 6.01M / **6.60M** / 7.67M (n=9) | 360k / **574k** / 696k (n=14) | 959k / **1.10M** / 1.20M (n=9) | 0.052 (n=46) |
-| J (Dart, 8 phases) | – (n=0) | – (n=0) | 401k / **528k** / 815k (n=56) | – (n=0) | – |
-| N (JavaScript, 1 phase) | – (n=0) | – (n=0) | 183k / **271k** / 424k (n=12) | – (n=0) | – |
+| A | 98k / **103k** / 118k (n=29) | 835k / **1.63M** / 5.99M (n=7) | 253k / **382k** / 550k (n=55) | 193k / **299k** / 678k (n=7) | 0.588 (n=29) |
+| B | 83k / **104k** / 137k (n=231) | 4.27M / **6.98M** / 8.60M (n=21) | 388k / **513k** / 823k (n=19) | 716k / **871k** / 1.60M (n=21) | 0.223 (n=231) |
+| C | 75k / **90k** / 117k (n=15) | – (n=4) | – (n=3) | – (n=4) | 0.077 (n=15) |
+| E | 95k / **112k** / 129k (n=16) | 6.58M / **6.97M** / 8.46M (n=6) | 203k / **287k** / 384k (n=7) | 1.18M / **1.94M** / 3.89M (n=6) | 0.01 (n=16) |
+| H | 102k / **134k** / 182k (n=124) | 8.90M / **10.32M** / 14.33M (n=8) | 277k / **458k** / 605k (n=61) | 1.31M / **1.57M** / 2.07M (n=8) | 0.048 (n=124) |
+| I | 103k / **128k** / 150k (n=46) | 6.01M / **6.60M** / 7.67M (n=9) | 360k / **574k** / 696k (n=14) | 959k / **1.10M** / 1.20M (n=9) | 0.052 (n=46) |
+| J | – (n=0) | – (n=0) | 401k / **528k** / 815k (n=56) | – (n=0) | – |
+| N | – (n=0) | – (n=0) | 183k / **271k** / 424k (n=12) | – (n=0) | – |
 
 Projects D, F, K and L have fewer than 5 samples in every column. They count toward the pooled figures.
 
@@ -50,32 +51,32 @@ three as work gives a ceremony share of about 50%.
 
 | Project | Executed plans | Executor / GSD | Ceremony (upper bound) |
 | --- | --- | --- | --- |
-| A (Rust) | 29 | 36% | 64% |
-| B (Python) | 231 | 47% | 53% |
-| C (Dart) | 15 | 29% | 71% |
-| E (Dart) | 16 | 42% | 58% |
-| H (Python) | 124 | 41% | 59% |
-| I (Python) | 46 | 36% | 64% |
+| A | 29 | 36% | 64% |
+| B | 231 | 47% | 53% |
+| C | 15 | 29% | 71% |
+| E | 16 | 42% | 58% |
+| H | 124 | 41% | 59% |
+| I | 46 | 36% | 64% |
 
 ## Ceremony shape (`audit` logic over every phase dir with ≥1 plan)
 
 | Project | Phases | Plans/phase p50 | Tasks/plan p50 | Plans with 1–2 tasks | Phases ≤3 tasks (lean-eligible) | Phases with merge candidates | Files/phase dir p25/p50/p75 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | **Pooled** | 157 | 4 | 3 | **40%** | **7%** | **10%** | 9 / 14 / 22 |
-| A (Rust, 28 phases) | 24 | 4 | 3 | 40% | 17% | 13% | 8 / 11 / 21 |
-| B (Python, 23 phases) | 23 | 9 | 3 | 27% | 0% | 0% | 23 / 29 / 39 |
-| C (Dart, 20 phases) | 20 | 3 | 2 | 61% | 5% | 10% | 10 / 13 / 17 |
-| D (TypeScript, 19 phases) | 16 | 2.5 | 2 | 60% | 6% | 0% | 6 / 9 / 13 |
-| E (Dart, 18 phases) | 18 | 4 | 3 | 47% | 6% | 11% | 11 / 15 / 24 |
-| F (Dart, 16 phases) | 8 | 3 | 2 | 69% | 13% | 13% | 8 / 10 / 11 |
-| G (TypeScript, 11 phases) | 11 | 3 | 2 | 69% | 18% | 36% | 8 / 10 / 13 |
-| H (Python, 10 phases) | 10 | 11.5 | 3 | 27% | 0% | 0% | 20 / 33 / 42 |
-| I (Python, 10 phases) | 8 | 6.5 | 3 | 29% | 0% | 13% | 21 / 23 / 27 |
-| J (Dart, 8 phases) | 5 | 5 | 2 | 52% | 0% | 20% | 11 / 13 / 15 |
-| K (Kotlin, 5 phases) | 5 | 2 | 2 | 100% | 20% | 0% | 7 / 7 / 8 |
-| L (Python, 5 phases) | 5 | 4 | 2 | 79% | 0% | 40% | 13 / 14 / 14 |
-| M (Dart, 3 phases) | 3 | 5 | 3 | 24% | 0% | 0% | 13 / 17 / 19 |
-| N (JavaScript, 1 phase) | 1 | 3 | 8 | 0% | 0% | 0% | 12 / 12 / 12 |
+| A | 24 | 4 | 3 | 40% | 17% | 13% | 8 / 11 / 21 |
+| B | 23 | 9 | 3 | 27% | 0% | 0% | 23 / 29 / 39 |
+| C | 20 | 3 | 2 | 61% | 5% | 10% | 10 / 13 / 17 |
+| D | 16 | 2.5 | 2 | 60% | 6% | 0% | 6 / 9 / 13 |
+| E | 18 | 4 | 3 | 47% | 6% | 11% | 11 / 15 / 24 |
+| F | 8 | 3 | 2 | 69% | 13% | 13% | 8 / 10 / 11 |
+| G | 11 | 3 | 2 | 69% | 18% | 36% | 8 / 10 / 13 |
+| H | 10 | 11.5 | 3 | 27% | 0% | 0% | 20 / 33 / 42 |
+| I | 8 | 6.5 | 3 | 29% | 0% | 13% | 21 / 23 / 27 |
+| J | 5 | 5 | 2 | 52% | 0% | 20% | 11 / 13 / 15 |
+| K | 5 | 2 | 2 | 100% | 20% | 0% | 7 / 7 / 8 |
+| L | 5 | 4 | 2 | 79% | 0% | 40% | 13 / 14 / 14 |
+| M | 3 | 5 | 3 | 24% | 0% | 0% | 13 / 17 / 19 |
+| N | 1 | 3 | 8 | 0% | 0% | 0% | 12 / 12 / 12 |
 
 Plan sizes (pooled, n=993 plans): 1 task 2%, 2 tasks 38%, 3 tasks 55%, 4 tasks 3%, 5 tasks 1%,
 6+ tasks 1%. Planners pack almost every plan to 2–3 tasks and then add more plans. A phase is
@@ -107,7 +108,7 @@ has run on a real project.
 musk v0.3–v0.5 ran on 10 projects of one developer, all with `scope_cuts: defer`. The ledger is
 measured; savings are estimates (deleted work never ran), priced with v0.5's `lib/pricing.cjs`
 from each project's own transcripts (`harness`) or the priors above (`prior`, fewer than 5 samples).
-Projects are labelled by spend rank only.
+Projects are labelled by spend rank.
 
 | Project | Spend | Cuts | Restored | Est. net p50 | Net ÷ spend | musk's own cost ÷ spend | Basis |
 | --- | --- | --- | --- | --- | --- | --- | --- |
