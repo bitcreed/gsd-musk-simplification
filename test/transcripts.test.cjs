@@ -329,3 +329,17 @@ test('copied history (resume/fork): one message keeps its final usage, one discu
   assert.equal(c.injections.discuss.length, 1);
 });
 
+test('pass cost: a plan pass row counts without transcripts; ledger runs only fill the shortfall', () => {
+  const deps = cap();
+  const plan = passCost(deps, [{ ts: '2026-09-01T10:00:00Z', type: 'pass', phase: '2', point: 'plan:pre' }], null, null);
+  assert.deepEqual(plan.injections, { discuss: 0, plan: 1 });
+  assert.equal(plan.fragment_tokens, 20);
+  const cal = { basis: 'harness', injections: { evidence: true, discuss: [{ phase: '2', ts: '2026-09-01T09:00:00Z', tags: ['musk', 'musk_lean'] }], plan: [] } };
+  const rows = [
+    { ts: '2026-09-01T10:00:00Z', type: 'pass', phase: '2', point: 'discuss:pre' },
+    { ts: '2026-09-02T10:00:00Z', type: 'pass', phase: '2', point: 'discuss:pre' },
+  ];
+  const c = passCost(deps, rows, cal, null);
+  assert.deepEqual(c.injections, { discuss: 2, plan: 0 });
+  assert.equal(c.fragment_tokens, (100 + 50) + 100, 'the evidenced run keeps its lean tag');
+});

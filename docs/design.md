@@ -170,10 +170,10 @@ measured tokens of `musk-*` skill runs where attributable. A discuss or planner 
 musk fragment tag (`<musk>`, `<musk_lean>`, `<musk_milestone>`) appears in its transcript, and
 only the fragments whose tags appear are charged, so runs from before musk was installed and
 fragments whose `when` was off cost nothing. A run copied into several transcripts (resume, fork)
-counts once. The ledger fills in where transcripts are missing: one discuss run per `pass` row
-(or per phase with discuss-point cuts and no pass row), one plan run per phase with plan-point
-rows. Per phase the larger count wins. Calibrations written before 0.5.4 have no tags; for those,
-runs before the first ledger row are ignored.
+counts once. The ledger fills in where transcripts are missing: one run per `pass` row at a
+point (discuss or plan), or one per phase with cuts at that point and no pass row. Per phase the
+evidenced runs keep their tags and ledger runs are added only for the shortfall. Calibrations
+written before 0.5.4 have no tags; for those, runs before the first ledger row are ignored.
 Net = gross − pass cost. Every number carries its `basis` (`harness` | `prior`) and `n`.
 
 ## Known limitations
