@@ -44,11 +44,18 @@ test('phase-check: no record -> prints the pass; pass row -> recorded', () => {
   const miss = run(ctx, ['phase-check', '--phase', '4']);
   assert.equal(miss.recorded, false);
   assert.equal(miss.action, 'run-pass');
-  // the host's requirement list is fixed by plan time: requirement cuts can only be proposed here
-  assert.match(miss.instructions, /log requirement cuts with --status proposed/);
   assert.match(miss.instructions, /no subtraction pass recorded for phase 4/);
-  assert.match(miss.instructions, /d{20}/); // the discuss:pre fragment text rides along
   assert.match(miss.instructions, /musk pass --phase 4 --point plan:pre/);
+  // The host's requirement list is fixed by plan time and the planner leaves Deferred Ideas out
+  // of its plans: every scope cut is only proposed, kept in scope and written nowhere else.
+  const logs = miss.instructions.match(/gsd-tools musk log [^`\n]*/g);
+  assert.ok(logs.length >= 1);
+  for (const l of logs) assert.match(l, /--class scope .*--point plan:pre --status proposed/);
+  assert.doesNotMatch(miss.instructions, /d{20}/, 'not the discuss:pre fragment');
+  assert.doesNotMatch(miss.instructions, /\*\*defer\*\*|v2|\[deferred\]|scope_cuts|add it under Deferred Ideas/);
+  assert.match(miss.instructions, /plan it in full/);
+  assert.match(miss.instructions, /not to CONTEXT\.md \(no Deferred Ideas, no D-NN\), REQUIREMENTS\.md or ROADMAP\.md/);
+  assert.match(miss.instructions, /for the user to approve/);
 
   const row = run(ctx, ['pass', '--phase', '04', '--point', 'plan:pre']);
   assert.deepEqual([row.type, row.phase, row.point], ['pass', '4', 'plan:pre']);
