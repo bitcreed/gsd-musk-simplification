@@ -16,8 +16,8 @@ records the answer so the savings can be measured.
 |---|---|---|---|
 | Milestone | `discuss:pre` and the `plan:pre` safety net (gated by `musk.milestone_pass`; run when `milestone-check` reports `pass_due`) + manual `/gsd-musk-roadmap` | contribution → orchestrator, skill | Challenge every remaining phase and REQ of the milestone: delete, defer, merge. |
 | Requirements | `discuss:pre` | contribution → orchestrator | Owner check: every REQ in the phase traces to a source (user, PROJECT.md, ADR). Ownerless → scope cut, recorded in CONTEXT.md as a `[deferred]` decision when CONTEXT.md is written. Ends with `musk pass --phase N` (a `pass` row, cuts or not). |
-| Safety net | `plan:pre` | contribution → planner (first line of the planner rules; `plan:pre` has no orchestrator role) | `musk phase-check --phase N`: one line when the phase has a pass record; otherwise it prints the discuss:pre text so the planner runs the pass before it plans. Requirement cuts are only proposed here: the host read the phase's requirement IDs before the planner started and gives that list to the plan checker and the coverage gate (core seam 9). In `ask` mode every cut is only proposed. When the milestone pass is due, it first tells the planner to run `gsd-musk-roadmap auto`. Catches phases planned without discuss, or whose discuss never rendered hooks. |
-| Phase ceremony | `discuss:pre` (gated by `musk.lean_lane`) | contribution → orchestrator | Small phase → lean lane: no gray-area questioning, a "research not needed" RESEARCH.md, one plan. |
+| Safety net | `plan:pre` | contribution → planner (first line of the planner rules; `plan:pre` has no orchestrator role) | `musk phase-check --phase N`: one line when the phase has a pass record; otherwise it prints a plan-time pass for the planner to run before it plans. Every scope cut there is only proposed (`--status proposed`), stays in scope and is planned, and is written nowhere but the ledger and the planner's return: the host read the phase's requirement IDs before the planner started and gives that list to the plan checker and the coverage gate (core seam 9), and the planner leaves CONTEXT.md's Deferred Ideas out of its plans. When the milestone pass is due, it first tells the planner to run `gsd-musk-roadmap auto`. Catches phases planned without discuss, or whose discuss never rendered hooks. |
+| Phase ceremony | `discuss:pre` (gated by `musk.lean_lane`) | contribution → orchestrator | Small phase → lean lane: no gray-area questioning, one plan. It writes a "research not needed" RESEARCH.md, a PATTERNS.md from its scout and a draft VALIDATION.md, so plan-phase skips the researcher (§5) and the pattern mapper (§7.8) and its Nyquist gate (§7.5) finds the file it requires. |
 | Implementation + plan count | `plan:pre` | contribution → planner | Add nothing without a source. Fewest plans (≤3 tasks → one). Log omissions. (Also reaches `/gsd-quick`'s planner; `/gsd-quick-batch` renders no hooks, see CORE-SEAMS #8.) |
 | Commit | `execute:post` (phases and `/gsd-quick`) | step → command `musk commit` | Commit `.planning/musk/` through `gsd-tools query commit`, which applies `commit_docs`, so musk's files land in history when GSD commits its own. |
 | Measurement | `verify:post` | step → command `musk record` | Snapshot the phase's measured cost, commit it, print one line (net, unreviewed inferred cuts, a due manual step). |
@@ -86,6 +86,10 @@ Declared with types in `capability.json`; what each does is in the README's *Con
   - impl: `task`, `file`, `dep`, `flag`, `abstraction`, `layer`, `test`, `doc`
   - ceremony: `lean-lane`, `reroute-quick`, `reroute-fast`, `plan-merge`, `phase-merge`, `step-skip`
   `qty` (default 1) lets one row stand for several identical units (e.g. 3 tasks).
+- `.planning/musk/.ledger.lock` — held while a writer reads, allocates an id and appends. It names
+  its owner (pid, host, token, time). It is reclaimed only when the owner's pid is gone on this
+  host, or after 10 minutes for another host or an unreadable owner; never for age alone, since a
+  paused writer still holds it. Release checks the token.
 - `.planning/musk/calibration.json` — written by `musk calibrate` (see below).
 - `.planning/musk/MILESTONE-<slug>.md` — one-shot marker + report of the milestone pass.
 
@@ -102,13 +106,13 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
 | `confirm` | `<id>... [--reason]` | Append a confirm row per id: a cut applied without approval (`inferred`) is reviewed and kept. `list` shows `confirmed` and `unreviewed`; the ledger is never rewritten. |
 | `list` | `[--phase N] [--class C] [--json]` | Current state of cuts (reinstated ones marked). |
 | `pass` | `--phase N [--point discuss:pre]` | Append a `pass` row: the per-phase pass ran for N. |
-| `phase-check` | `--phase N [--json]` | `recorded` when the ledger has a pass row for N (or, for older ledgers, a discuss:pre cut or lean-lane row), or N's CONTEXT.md mentions musk. Otherwise prints the discuss:pre fragment and the `pass` command to finish with. Non-numeric phase or `musk.enabled: false` → no-op. |
+| `phase-check` | `--phase N [--json]` | `recorded` when the ledger has a pass row for N (or, for older ledgers, a discuss:pre cut or lean-lane row), or N's CONTEXT.md mentions musk. Otherwise prints the plan-time pass (scope cuts proposed only) and the `pass` command to finish with. Non-numeric phase or `musk.enabled: false` → no-op. |
 | `milestone-check` | `[--json]` | `{milestone, phases, phases_started, first_of_milestone, marker, marker_exists, run, config}` — `config` holds the `musk.*` settings in effect (project over defaults), so skills never look them up separately. `run` is true when no phase of the current milestone has a CONTEXT.md or PLAN.md and the marker does not exist. |
 | `audit` | `--phase N [--json]` | Deterministic plan metrics for the phase: plans, tasks per plan, waves, files per plan, `merge_candidates` (groups whose combined task count ≤ 3, same wave or linear chain, disjoint-or-overlapping files), `total_tasks`, `quick_eligible` (total_tasks ≤ 3 and one plan's worth). |
 | `calibrate` | `[--since <ISO>] [--json]` | Read Claude Code transcripts for this project only; write `calibration.json`. |
 | `stats` | `[--phase N] [--json] [--record]` | Report counts, add-back ratio, estimated gross savings (p25/p50/p75), pass cost, net. `--record` appends a `snapshot` row. |
 | `record` | | The `verify:post` step: refresh calibration, append a `snapshot` row, commit `.planning/musk/`, print one line. Same as `stats --record` (manifest commands may not carry flags). |
-| `commit` | `[--message]` | The `execute:post` step: commit `.planning/musk/` through `gsd-tools query commit`. Skips when the invoking checkout sets `commit_docs: false`. |
+| `commit` | `[--message]` | The `execute:post` step: commit `.planning/musk/` through `gsd-tools query commit`. Skips when the invoking checkout's effective `commit_docs` is `false` (workstream config over the root, as gsd-core merges them). |
 
 ### Calibration (Claude Code runtime)
 
@@ -156,7 +160,7 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
 | `criterion` | `per_phase × 0.08 × qty`: median 5 criteria per phase × executors' ~40% share; the phase's fixed ceremony stays |
 | `milestone-phase`, `phase-merge` | `per_phase × qty` (phase-merge saves one phase's overhead: use `per_phase × 0.35`) |
 | `plan-merge` | `per_plan_overhead × qty` |
-| `lean-lane` | `per_phase` × 0.06 (the researcher and pattern mapper it skips; older `reroute-quick` rows with reason `lean` are priced the same) |
+| `lean-lane` | `per_phase` × 0.05 (the researcher and pattern mapper it skips: (3% + 1%) / 82% GSD-attributed, [stats.md](stats.md); older `reroute-quick` rows with reason `lean` are priced the same) |
 | `reroute-quick` | `per_phase` p25/p50/p75 − `per_quick_task` p75/p50/p25 (floor 0, so the range stays ordered) |
 | `reroute-fast` | `per_phase` − 20k |
 | `step-skip` | `null` (reported as a count) |

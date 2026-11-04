@@ -7,7 +7,8 @@
  * Synchronous (the gsd-tools dispatcher rejects Promise-returning routers). Output is plain text,
  * or a single JSON document when --json / --raw / `raw` is given.
  *
- * deps (all optional, for tests): fs, homedir(), now(), stdout(str), capRoot.
+ * deps (all optional, for tests): fs, homedir(), now(), stdout(str), capRoot, and for the ledger
+ * lock pid, hostname(), pidAlive(pid).
  */
 
 const fs = require('node:fs');
@@ -52,6 +53,10 @@ function makeDeps(deps = {}) {
     env: deps.env || process.env,
     git: deps.git,
     commit: deps.commit || gsdCommit,
+    // ledger lock owner identity and liveness (lib/ledger.cjs defaults to the real ones)
+    pid: deps.pid,
+    hostname: deps.hostname,
+    pidAlive: deps.pidAlive,
   };
 }
 
@@ -110,15 +115,23 @@ function commitVerdict(status, stdout, stderr = '') {
 
 // commit_docs as the INVOKING checkout sets it. musk state is committed in the main checkout, so
 // gsd-tools sees the main checkout's policy; a worktree or workstream that turned docs commits off
-// must not have musk commit them anyway.
-function commitDocsOff(d, P) {
-  for (const dir of new Set([P.rootPlanDir, P.planDir])) {
-    let cfg = {};
-    try { cfg = JSON.parse(d.fs.readFileSync(path.join(dir, 'config.json'), 'utf8')); } catch { continue; }
-    const v = cfg.commit_docs ?? (cfg.planning && cfg.planning.commit_docs);
-    if (v === false) return true;
+// must not have musk commit them anyway. Resolved as gsd-core's loadConfig does: the workstream
+// config deep-merged over the root one, then the flat key before `planning.commit_docs`.
+function deepMerge(base, over) {
+  const out = { ...base };
+  for (const [k, v] of Object.entries(over)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    out[k] = v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object' ? deepMerge(base[k], v) : v;
   }
-  return false;
+  return out;
+}
+function commitDocsOff(d, P) {
+  let cfg = {};
+  for (const dir of new Set([P.rootPlanDir, P.planDir])) {
+    try { cfg = deepMerge(cfg, JSON.parse(d.fs.readFileSync(path.join(dir, 'config.json'), 'utf8')) || {}); } catch { /* absent or unreadable: next */ }
+  }
+  const v = cfg.commit_docs !== undefined ? cfg.commit_docs : cfg.planning && cfg.planning.commit_docs;
+  return v === false;
 }
 
 function commitMusk(d, P, message) {
@@ -245,13 +258,16 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
       if (ctxFile && /\bmusk\b/i.test(d.fs.readFileSync(path.join(pd.dir, ctxFile), 'utf8'))) evidence = 'context';
     }
     if (evidence) return emit({ phase, recorded: true, evidence, action: ms.pass_due ? 'run-milestone-pass' : 'none' }, `${msLine}musk: pass recorded for phase ${phase}`);
-    let frag = '';
-    try { frag = d.fs.readFileSync(path.join(d.capRoot, 'fragments', 'discuss-pre.md'), 'utf8').trim(); } catch { /* missing fragment: the instruction alone */ }
+    // Not the discuss:pre text: that one defers cuts into CONTEXT.md's Deferred Ideas, which the
+    // planner must leave out of its plans while the checker still demands every requirement ID.
     const text = [
-      `musk: no subtraction pass recorded for phase ${phase}. Run it now, before you plan: cut first, then plan only what survives. CONTEXT.md already exists, so add the D-NN [deferred] decisions to it. The plan checker and the coverage gate will still demand every requirement ID this phase started with, so log requirement cuts with --status proposed and leave REQUIREMENTS.md and the ROADMAP Requirements line unchanged; other cuts apply per the mode. In \`ask\` mode nobody can be asked here: log every cut with --status proposed and change nothing.`,
-      frag,
-      `When done (also when nothing was cut): gsd-tools musk pass --phase ${phase} --point plan:pre`,
-    ].filter(Boolean).join('\n');
+      `musk: no subtraction pass recorded for phase ${phase}. Run it now, before you plan. The phase's requirement IDs are fixed and the plan checker demands each one, so scope cuts are proposals only:`,
+      `1. Each requirement and success criterion needs an owner: a user statement, a PROJECT.md goal, a SPEC or ADR, or an owned item's dependency. Flag those that are ownerless, duplicated or nice-to-have; never security mitigations, locked decisions, anything the user asked for, tests guarding behaviour that remains, or api-coverage rows.`,
+      `2. Log each: \`gsd-tools musk log --class scope --unit req|criterion --ref "<ID>: <full text>" --reason "<why>" --phase ${phase} --point plan:pre --status proposed --inferred\``,
+      `3. Keep every flagged item in scope and plan it in full. Write it nowhere else: not to CONTEXT.md (no Deferred Ideas, no D-NN), REQUIREMENTS.md or ROADMAP.md.`,
+      `4. In your return, list the proposals (M-id, ID, reason) for the user to approve.`,
+      `Implementation cuts follow your musk planner rules as usual. When done (also when nothing was flagged): gsd-tools musk pass --phase ${phase} --point plan:pre`,
+    ].join('\n');
     return emit({ phase, recorded: false, evidence: null, action: ms.pass_due ? 'run-milestone-pass' : 'run-pass', milestone_pass_due: ms.pass_due, instructions: msLine + text }, msLine + text);
   }
 

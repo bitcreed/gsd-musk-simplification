@@ -116,6 +116,15 @@ test('every manifest step command passes gsd-core\'s ref.command grammar and nam
   }
 });
 
+test('the lean lane writes every artifact plan-phase checks before it would spawn or stop', () => {
+  // plan-phase: RESEARCH.md skips the researcher (§5), PATTERNS.md the pattern mapper (§7.8), and
+  // the Nyquist gate (§7.5) stops for the user unless a VALIDATION.md exists.
+  const frag = fs.readFileSync(path.join(__dirname, '..', 'fragments', 'discuss-pre-lean.md'), 'utf8');
+  for (const f of ['RESEARCH', 'PATTERNS', 'VALIDATION']) assert.match(frag, new RegExp(`<padded>-${f}\\.md`));
+  for (const k of ['phase', 'slug', 'status: draft', 'nyquist_compliant: false', 'wave_0_complete: false', 'created']) assert.ok(frag.includes(`\`${k}\``), k);
+  assert.doesNotMatch(frag, /Validation Architecture/, 'a stub with that section would arm the checker\'s Dimension 8');
+});
+
 test('append after a torn last line keeps the new row readable', () => {
   const ctx = setup('proj');
   const ledgerFile = path.join(ctx.cwd, '.planning/musk/ledger.jsonl');
@@ -166,4 +175,140 @@ test('musk commit honours commit_docs: false in the invoking checkout', () => {
   fs.writeFileSync(path.join(ctx.cwd, '.planning/config.json'), JSON.stringify({ planning: { commit_docs: false } }));
   assert.equal(run(ctx, ['commit']).reason, 'skipped_commit_docs_false');
   assert.equal((ctx.commits || []).length, 0);
+});
+
+test('musk commit resolves commit_docs as gsd-core does: workstream config over the root', () => {
+  const ctx = setup('proj');
+  run(ctx, cut());
+  const env = { GSD_WORKSTREAM: 'w1' };
+  const ws = path.join(ctx.cwd, '.planning/workstreams/w1');
+  fs.mkdirSync(ws, { recursive: true });
+  const both = (root, wsCfg) => {
+    fs.writeFileSync(path.join(ctx.cwd, '.planning/config.json'), JSON.stringify(root));
+    fs.writeFileSync(path.join(ws, 'config.json'), JSON.stringify(wsCfg));
+    return run(ctx, ['commit'], { env }).reason;
+  };
+  assert.equal(both({ planning: { commit_docs: false } }, { planning: { commit_docs: true } }), 'committed');
+  assert.equal(both({ planning: { commit_docs: true } }, { planning: { commit_docs: false } }), 'skipped_commit_docs_false');
+  assert.equal(both({ commit_docs: true }, { commit_docs: false }), 'skipped_commit_docs_false');
+  assert.equal(both({ commit_docs: false }, { musk: { enabled: true } }), 'skipped_commit_docs_false');
+  // without the workstream, only the root config applies
+  assert.equal(run(ctx, ['commit']).reason, 'skipped_commit_docs_false');
+});
+
+// Ledger lock: owner identity, liveness-based reclamation, token-checked release.
+const ledgerLib = require('../lib/ledger.cjs');
+const lockDeps = (extra = {}) => ({ fs, hostname: () => 'h1', pid: 1000, pidAlive: () => true, ...extra });
+const lockSetup = () => {
+  const ctx = setup('proj');
+  const planDir = path.join(ctx.cwd, '.planning');
+  const lock = path.join(planDir, 'musk', '.ledger.lock');
+  fs.mkdirSync(path.dirname(lock), { recursive: true });
+  return { planDir, lock };
+};
+const writeOwner = (lock, o) => fs.writeFileSync(lock, JSON.stringify({ pid: 2000, host: 'h1', token: 'other', ts: new Date().toISOString(), ...o }));
+// Runs fn with the clock jumping past the 10 s lock wait once polling starts, so a busy lock
+// fails fast instead of after the real wait.
+function fastClock(fn, after = 2) {
+  const orig = Date.now;
+  let calls = 0;
+  Date.now = () => orig() + (++calls > after ? 60000 : 0);
+  try { return fn(); } finally { Date.now = orig; }
+}
+
+test('lock: holder identity is recorded and released', () => {
+  const { planDir, lock } = lockSetup();
+  const seen = ledgerLib.withLock(lockDeps(), planDir, () => JSON.parse(fs.readFileSync(lock, 'utf8')));
+  assert.deepEqual([seen.pid, seen.host, typeof seen.token, typeof seen.ts], [1000, 'h1', 'string', 'string']);
+  assert.equal(fs.existsSync(lock), false);
+});
+
+test('lock: an old lock whose owner is alive (paused) is not reclaimed', () => {
+  const { planDir, lock } = lockSetup();
+  writeOwner(lock, { ts: '2020-01-01T00:00:00Z' });
+  const old = new Date('2020-01-01');
+  fs.utimesSync(lock, old, old);
+  const asked = [];
+  const deps = lockDeps({ pidAlive: (p) => { asked.push(p); return true; } });
+  assert.throws(() => fastClock(() => ledgerLib.withLock(deps, planDir, () => 'ran')), /ledger lock busy.*pid 2000 on h1/);
+  assert.ok(asked.includes(2000));
+  assert.equal(JSON.parse(fs.readFileSync(lock, 'utf8')).token, 'other', 'the live owner keeps its lock');
+});
+
+test('lock: a dead owner on this host is reclaimed at once; a foreign host only after the long timeout', () => {
+  const { planDir, lock } = lockSetup();
+  writeOwner(lock, {});
+  assert.equal(ledgerLib.withLock(lockDeps({ pidAlive: () => false }), planDir, () => 'ran'), 'ran');
+  assert.equal(fs.existsSync(lock), false);
+
+  writeOwner(lock, { host: 'h2', ts: new Date(Date.now() - 20 * 60 * 1000).toISOString() });
+  assert.equal(ledgerLib.withLock(lockDeps(), planDir, () => 'ran'), 'ran');
+  // a recent foreign lock is respected: another host's pid says nothing about liveness here
+  writeOwner(lock, { host: 'h2' });
+  assert.throws(() => fastClock(() => ledgerLib.withLock(lockDeps({ pidAlive: () => false }), planDir, () => 'ran')), /busy/);
+  assert.equal(JSON.parse(fs.readFileSync(lock, 'utf8')).token, 'other');
+});
+
+test('lock: a reclaimer that moved a newer lock puts it back and does not take it', () => {
+  const { planDir, lock } = lockSetup();
+  writeOwner(lock, { token: 'dead' });
+  // Another reclaimer wins between our judgement and our rename, and takes a fresh lock.
+  let raced = false;
+  const racyFs = {
+    ...fs,
+    renameSync(from, to) {
+      if (!raced && from === lock) {
+        raced = true;
+        fs.rmSync(lock);
+        writeOwner(lock, { token: 'winner', pid: 3000 });
+      }
+      return fs.renameSync(from, to);
+    },
+  };
+  const ran = [];
+  const deps = lockDeps({ fs: racyFs, pidAlive: (p) => p !== 2000 });
+  assert.throws(() => fastClock(() => ledgerLib.withLock(deps, planDir, () => ran.push(1)), 3), /busy.*pid 3000/);
+  assert.deepEqual(ran, []);
+  assert.equal(JSON.parse(fs.readFileSync(lock, 'utf8')).token, 'winner', 'the winner\'s lock is restored');
+  assert.deepEqual(fs.readdirSync(path.dirname(lock)).filter((f) => f.includes('stale')), []);
+});
+
+test('lock: release never removes a lock that is no longer ours', () => {
+  const { planDir, lock } = lockSetup();
+  ledgerLib.withLock(lockDeps(), planDir, () => {
+    fs.rmSync(lock);
+    writeOwner(lock, { token: 'someone-else' });
+  });
+  assert.equal(JSON.parse(fs.readFileSync(lock, 'utf8')).token, 'someone-else');
+});
+
+test('lock: a pre-0.5.5 lock directory is reclaimed only after the long timeout', () => {
+  const { planDir, lock } = lockSetup();
+  fs.mkdirSync(lock);
+  assert.throws(() => fastClock(() => ledgerLib.withLock(lockDeps(), planDir, () => 'ran')), /busy/);
+  const old = new Date(Date.now() - 20 * 60 * 1000);
+  fs.utimesSync(lock, old, old);
+  assert.equal(ledgerLib.withLock(lockDeps(), planDir, () => 'ran'), 'ran');
+  assert.equal(fs.existsSync(lock), false);
+});
+
+test('lock: concurrent processes reclaiming one dead owner\'s lock still get distinct ids', async () => {
+  const { spawn, spawnSync } = require('node:child_process');
+  const os = require('node:os');
+  const ctx = setup('proj');
+  fs.rmSync(path.join(ctx.cwd, '.planning/musk/ledger.jsonl'), { force: true });
+  const lock = path.join(ctx.cwd, '.planning/musk/.ledger.lock');
+  fs.mkdirSync(path.dirname(lock), { recursive: true });
+  const deadPid = spawnSync(process.execPath, ['-e', '']).pid;
+  fs.writeFileSync(lock, JSON.stringify({ pid: deadPid, host: os.hostname(), token: 'dead', ts: new Date().toISOString() }));
+  const router = path.join(__dirname, '..', 'musk-router.cjs');
+  const N = 8;
+  await Promise.all(Array.from({ length: N }, (_, i) => new Promise((resolve, reject) => {
+    const p = spawn(process.execPath, [router, ...cut([]).map((a) => (a === 'T-1' ? `T-${i}` : a)), '--cwd', ctx.cwd], { stdio: 'ignore' });
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`exit ${code}`))));
+  })));
+  const ids = run(ctx, ['list']).map((c) => c.id);
+  assert.equal(ids.length, N);
+  assert.equal(new Set(ids).size, N);
+  assert.deepEqual(fs.readdirSync(path.dirname(lock)).filter((f) => f.startsWith('.ledger.lock')), []);
 });

@@ -106,8 +106,8 @@ test('record names the manual step that is due, and only then', () => {
 
 test('lean lane is priced as the ceremony it skips; reroute ranges stay ordered', () => {
   const p = effectivePrices(null);
-  assert.equal(priceCut({ unit: 'lean-lane' }, p).p50, Math.round(P.per_phase * 0.06));
-  assert.equal(priceCut({ unit: 'reroute-quick', reason: 'lean' }, p).p50, Math.round(P.per_phase * 0.06), 'pre-0.5.3 lean rows');
+  assert.equal(priceCut({ unit: 'lean-lane' }, p).p50, Math.round(P.per_phase * 0.05));
+  assert.equal(priceCut({ unit: 'reroute-quick', reason: 'lean' }, p).p50, Math.round(P.per_phase * 0.05), 'pre-0.5.3 lean rows');
   const q = (p25, p50, p75) => ({ p25, p50, p75, n: 9, basis: 'harness' });
   const wide = effectivePrices({ prices: { per_phase: q(1000000, 1100000, 1200000), per_quick_task: q(100000, 1100000, 1200000) } });
   const r = priceCut({ unit: 'reroute-quick' }, wide);
