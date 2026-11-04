@@ -126,7 +126,7 @@ test('quick task: orchestrator segment and the agents it spawns form one sample'
 test('worktree transcript dirs are part of the project', () => {
   const p = project();
   p.write(path.join(p.dir, 's1.jsonl'), [asst(100)]);
-  p.write(path.join(`${p.dir}--claude-worktrees-wf-1`, 's2.jsonl'), [asst(50)]);
+  p.write(path.join(`${p.dir}--claude-worktrees-wf-1`, 's2.jsonl'), [{ ...asst(50), cwd: path.join(p.cwd, '.claude', 'worktrees', 'wf-1') }]);
   p.write(path.join(`${p.dir}-other`, 's3.jsonl'), [asst(7)]);
   const c = calibrate(p.deps, p.cwd);
   assert.equal(c.totals.tokens, 150);
@@ -198,3 +198,134 @@ test('pass cost: a pre-0.5.4 calibration (no evidence) keeps the cut-off at the 
   const rows = [{ ts: '2026-09-01T10:00:00Z', type: 'pass', phase: '2', point: 'discuss:pre' }];
   assert.deepEqual(passCost(deps, rows, cal, null).injections, { discuss: 2, plan: 0 });
 });
+
+// Second review: ownership across nested skills and the spawn graph, gsd_run, worktree
+// provenance, copied history, and the ledger fallback.
+
+test('a non-musk skill nested in a musk run stays in the run; musk commit still resumes the host command', () => {
+  const p = project();
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-discuss-phase', '4'),
+    asst(100, [tool('Skill', { skill: 'gsd-musk-roadmap', args: 'auto' })]),
+    asst(200, [tool('Skill', { skill: 'gsd-capture', args: '--backlog "Phase 5: later"' })]),
+    asst(300, [tool('Skill', { skill: 'gsd-phase', args: 'remove 5' })]),
+    asst(400, [tool('Skill', { skill: 'gsd-musk-roadmap', args: 'auto' })]),
+    asst(500, [tool('Bash', { command: 'gsd_run musk log --class scope --unit milestone-phase --ref P5 --reason r' })]),
+    asst(600, [tool('Bash', { command: 'gsd_run musk commit --message "musk: cuts"' })]),
+    asst(700),
+  ]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-roadmap'].tokens_total, 200 + 300 + 400 + 500 + 600);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-discuss-phase'].tokens_total, 100 + 700);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-discuss-phase'].runs, 1);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-phase'], undefined);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-capture'], undefined);
+});
+
+test('the reply to a musk question that calls musk through gsd_run or $GSD_TOOLS stays in the musk run', () => {
+  const p = project();
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-execute-phase', '2'),
+    asst(1000, [tool('Skill', { skill: 'gsd-musk-roadmap' })]),
+    asst(100, [{ type: 'text', text: 'Cut these?' }]),
+    human('yes'),
+    asst(200, [tool('Bash', { command: 'gsd_run musk log --class scope --unit req --ref R1 --reason r' })]),
+    asst(300),
+    human('ok'),
+    asst(50, [tool('Bash', { command: '"$GSD_TOOLS" musk list --json' })]),
+    human('next'),
+    asst(4000),
+  ]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-roadmap'].tokens_total, 100 + 200 + 300 + 50);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-execute-phase'].tokens_total, 1000 + 4000);
+});
+
+test('a gsd-* agent that invokes the musk skill charges that run to musk', () => {
+  const p = project();
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-plan-phase', '2'),
+    asst(10, [tool('Agent', { subagent_type: 'gsd-planner', description: 'Plan phase 2', prompt: 'plan' }, 'toolu_pl')]),
+    result('toolu_pl', 'done', 'pl'),
+  ]);
+  p.write(path.join(p.dir, 's1', 'subagents', 'agent-pl.jsonl'), [
+    { type: 'user', timestamp: ts(), message: { role: 'user', content: 'plan' } },
+    asst(100, [tool('Skill', { skill: 'gsd-musk-roadmap', args: 'auto' })]),
+    asst(200, [tool('Bash', { command: 'gsd-tools musk commit' })]),
+    asst(300),
+  ]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-roadmap'].tokens_total, 200);
+  assert.equal(c.by_agent_type['gsd-planner'].tokens_total, 100 + 300);
+});
+
+test('grandchildren of a musk run are charged to it; a quick task is one sample down the spawn graph', () => {
+  const p = project();
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-musk-roadmap'),
+    asst(10, [tool('Agent', { subagent_type: 'general-purpose', description: 'Musk pass', prompt: 'cut' }, 'toolu_a')]),
+    result('toolu_a', 'done', 'a'),
+    cmd('/gsd-quick', 'tidy'),
+    asst(20, [tool('Agent', { subagent_type: 'gsd-executor', description: 'run quick', prompt: 'Run .planning/quick/260901-ab1-tidy' }, 'toolu_q')]),
+    result('toolu_q', 'done', 'q'),
+  ]);
+  const sub = (id, lines) => p.write(path.join(p.dir, 's1', 'subagents', `agent-${id}.jsonl`), lines);
+  sub('a', [
+    { type: 'user', timestamp: ts(), message: { role: 'user', content: 'cut' } },
+    asst(100, [tool('Agent', { subagent_type: 'gsd-planner', description: 'check', prompt: 'check' }, 'toolu_b')]),
+    result('toolu_b', 'done', 'b'),
+  ]);
+  sub('b', [{ type: 'user', timestamp: ts(), message: { role: 'user', content: 'check' } }, asst(1000)]);
+  sub('q', [
+    { type: 'user', timestamp: ts(), message: { role: 'user', content: 'Run .planning/quick/260901-ab1-tidy' } },
+    asst(300, [tool('Agent', { subagent_type: 'general-purpose', description: 'look', prompt: 'Compare with .planning/quick/260801-zz9-old' }, 'toolu_r')]),
+    result('toolu_r', 'done', 'r'),
+  ]);
+  sub('r', [{ type: 'user', timestamp: ts(), message: { role: 'user', content: 'Compare with .planning/quick/260801-zz9-old' } }, asst(300)]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-roadmap'].tokens_total, 10 + 100 + 1000);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-roadmap'].runs, 1);
+  assert.equal(c.samples.per_quick_task, 1);
+});
+
+test('worktree transcript dirs count only when their sessions ran in this project', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'musk-wt-'));
+  const cwd = path.join(tmp, 'demo');
+  fs.mkdirSync(path.join(cwd, '.planning'), { recursive: true });
+  const home = path.join(tmp, 'home');
+  const deps = { fs, homedir: () => home, now: () => new Date('2026-09-02T00:00:00Z') };
+  const write = (dir, file, at, lines) => {
+    const d = path.join(home, '.claude', 'projects', dir);
+    fs.mkdirSync(d, { recursive: true });
+    fs.writeFileSync(path.join(d, file), lines.map((l) => JSON.stringify({ ...l, cwd: at })).join('\n') + '\n');
+  };
+  const wt = path.join(cwd, '.claude', 'worktrees', 'other');
+  const sibling = `${cwd}--claude-worktrees-other`;
+  assert.equal(projectSlug(wt), projectSlug(sibling), 'the slug is lossy');
+  write(projectSlug(cwd), 's1.jsonl', cwd, [asst(100)]);
+  write(projectSlug(wt), 's2.jsonl', wt, [asst(50)]);
+  write(projectSlug(sibling), 's3.jsonl', sibling, [asst(7)]);
+  write(`${projectSlug(cwd)}--claude-worktrees-x`, 's4.jsonl', path.join(tmp, 'demo--claude-worktrees-x'), [asst(9)]);
+  const c = calibrate(deps, cwd);
+  assert.equal(c.totals.tokens, 150);
+  assert.equal(c.worktree_transcript_dirs, 1);
+});
+
+test('copied history (resume/fork): one message keeps its final usage, one discuss run counts once', () => {
+  const p = project();
+  fs.writeFileSync(path.join(p.cwd, '.planning', 'ROADMAP.md'), '### Phase 2: A\n');
+  const head = [
+    cmd('/gsd-discuss-phase', '2'),
+    asst(10, [tool('Bash', { command: 'gsd_run loop render-hooks discuss:pre' }, 'toolu_r1')]),
+    result('toolu_r1', '<musk>\ncut first\n</musk>'),
+  ];
+  const partial = asst(100);
+  const final = JSON.parse(JSON.stringify(partial));
+  final.message.usage = usage(150);
+  p.write(path.join(p.dir, 'a.jsonl'), [...head, partial]);
+  p.write(path.join(p.dir, 'b.jsonl'), [...head, final, asst(5)]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.totals.tokens, 10 + 150 + 5);
+  assert.equal(c.injections.discuss.length, 1);
+});
+

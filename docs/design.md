@@ -114,23 +114,30 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
 
 - Transcript dir: `~/.claude/projects/<slug>/` where slug = absolute project path with every
   non-alphanumeric char replaced by `-`. This project's dir is read, plus the dirs of Claude Code
-  worktrees under it (`<slug>--claude-worktrees-*`), which Claude Code files separately. Other runtimes →
+  worktrees under it (`<slug>--claude-worktrees-*`), which Claude Code files separately. The slug
+  is lossy (`/a/.claude/worktrees/x` and `/a--claude-worktrees-x` share it), so a session counts
+  only when its recorded `cwd` is in the project (own dir) or under `<project>/.claude/worktrees/`
+  (worktree dirs). Other runtimes →
   `calibration.json` with `basis: "none"`, stats fall back to priors.
 - Tokens per assistant message = `input_tokens + cache_creation_input_tokens + output_tokens`;
   `cache_read_input_tokens` reported separately (it is cheap, never mixed into the headline).
-  Dedupe streamed chunks by `message.id`.
+  Dedupe streamed chunks by `message.id`, within a file and across files (history copied by a
+  resume or fork): the most complete usage wins, the first copy keeps its attribution.
 - Attribute subagent transcripts (`<session>/subagents/agent-<id>.jsonl`, linked from the
   parent's `Agent` tool_use / tool_result) to `subagent_type` and — by parsing the spawn prompt —
   to phase (`phases/<NN>-…`) and plan (`<NN>-<PP>-PLAN.md`).
 - Attribute main-session tokens to the GSD command in effect (`<command-name>/gsd-…` user
   messages or a `Skill` call), to catch orchestrator cost per phase. A musk run is bounded: it
   ends after its `musk commit` call, or at a human message whose reply does no musk work (no
-  `gsd-tools musk` call, nothing written under `.planning/musk/`). Task notifications and
-  compaction summaries are not human messages. The interrupted command then resumes (a musk skill
-  invoked inside a command keeps its phase), so host work after a musk run is not charged to musk.
-  Agents spawned during a musk run are charged to it.
-- A quick task is one sample: the `/gsd-quick` segment plus every agent spawned inside it (and
-  their children), whatever quick id their prompts carry.
+  `gsd-tools musk`, `gsd_run musk` or `"$GSD_TOOLS" musk` call, nothing written under
+  `.planning/musk/`). Task notifications and compaction summaries are not human messages. The
+  interrupted command then resumes (a musk skill invoked inside a command keeps its phase), so
+  host work after a musk run is not charged to musk. A non-musk skill the run invokes
+  (`/gsd-phase`, `/gsd-capture`: applying a cut) stays in the run.
+- Ownership follows the spawn graph, whatever the agent's role or its prompt says: agents spawned
+  during a musk run, and their children, are charged to it, also when a `gsd-*` agent invoked the
+  musk skill. A quick task is one sample: the `/gsd-quick` segment plus every agent spawned inside
+  it, down to grandchildren, whatever quick id their prompts carry.
 - Derived prices (only when n ≥ 5 samples in this project, else `null`):
   `per_task`, `per_plan_overhead` (least-squares fit of executor tokens = a + b·tasks),
   `per_phase` (all attributed tokens of a phase), `per_quick_task`, `per_req`
@@ -162,10 +169,11 @@ add-back ratio (`reinstated / applied`).
 measured tokens of `musk-*` skill runs where attributable. A discuss or planner run counts when a
 musk fragment tag (`<musk>`, `<musk_lean>`, `<musk_milestone>`) appears in its transcript, and
 only the fragments whose tags appear are charged, so runs from before musk was installed and
-fragments whose `when` was off cost nothing. The ledger fills in where transcripts are missing:
-one discuss run per `pass` row (or per phase with discuss-point cuts and no pass row), one plan
-run per phase with plan-point rows. Per phase the larger count wins. Calibrations written before
-0.5.4 have no tags; for those, runs before the first ledger row are ignored.
+fragments whose `when` was off cost nothing. A run copied into several transcripts (resume, fork)
+counts once. The ledger fills in where transcripts are missing: one discuss run per `pass` row
+(or per phase with discuss-point cuts and no pass row), one plan run per phase with plan-point
+rows. Per phase the larger count wins. Calibrations written before 0.5.4 have no tags; for those,
+runs before the first ledger row are ignored.
 Net = gross − pass cost. Every number carries its `basis` (`harness` | `prior`) and `n`.
 
 ## Known limitations

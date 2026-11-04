@@ -50,7 +50,7 @@ function shape(planDir) {
 
 // Token samples from this project's transcripts, attributed by lib/transcripts.cjs.
 function tokens(dir, planDir) {
-  const scanned = scan(deps, transcriptDirs(deps, dir), { known: planning.knownPhases(deps, planDir) });
+  const scanned = scan(deps, transcriptDirs(deps, dir), { known: planning.knownPhases(deps, planDir), project: path.resolve(dir) });
   if (!scanned || !scanned.records.length) return null;
   const recs = scanned.records;
   const byBucket = {}; const byPhase = {}; const phaseCR = {}; const byQuick = {}; const quickCR = {}; const perPlan = {}; const planCR = {};
