@@ -1,6 +1,6 @@
 {
   "name": "gsd-musk-simplification",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "GSD capability: a subtraction pass (question, delete, simplify) with a savings ledger priced from real Claude Code token usage.",
   "license": "MIT",
   "author": "Andreas Brauchli",

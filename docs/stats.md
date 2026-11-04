@@ -92,20 +92,19 @@ prior, because it is not separable (see caveats).
 
 | Cut | Arithmetic | p50 |
 | --- | --- | --- |
-| 11 lean-eligible phases → `reroute-quick` | 11 × (6.87M − 455k); p25/p75 37.6M / 90.3M | 70.6M |
+| 11 lean-eligible phases → `reroute-quick` | 11 × (6.87M − 455k); p25/p75 33.5M / 94.3M | 70.6M |
 | 12 surplus plans in merge groups (non-lean phases) → `plan-merge` | 12 × 60k | 0.7M |
 | **Upper estimate** | 71.3M ÷ (157 phases × 6.87M = 1.08G) | **≈7%** |
-| Lower bound: lean lane only drops researcher + pattern-mapper | 11 × 6% of phase tokens × 6.87M + 0.7M | 5.6M ≈ **0.5%** |
+| Lower bound: lean lane only drops researcher + pattern-mapper | 11 × 5% of phase tokens × 6.87M + 0.7M | 4.5M ≈ **0.4%** |
 
-So the lean lane and plan merges alone are worth roughly **0.5–7%** of phase spend. The lean lane
-as built reaches only the lower bound: it skips questioning and research but still plans, executes
+So the lean lane and plan merges alone are worth roughly **0.4–7%** of phase spend. The lean lane
+as built reaches only the lower bound: it skips questioning, research and pattern mapping but still plans, executes
 and verifies. The upper row prices a real reroute to `/gsd-quick`, which needs core seam #3. Since
 0.5.5, `lib/pricing.cjs` prices a lean phase at 5% of `per_phase`: the researcher (3%) and pattern
 mapper (1%) it skips, over the 82% of tokens GSD attributes ((3% + 1%) / 82% ≈ 4.9%). The larger
 lever is in the measured structure, not in this estimate. 60% of GSD tokens are non-executor,
 and planning costs 14% on its own, before any scope is cut. Scope cuts (a deleted requirement
-≈ 1.04M, a deleted phase ≈ 6.87M) are not estimated here. Their frequency is unknown until musk
-has run on a real project.
+≈ 1.04M, a deleted phase ≈ 6.87M) are not estimated here; the next section measures them in use.
 
 ## In use, weeks 1–5 (2026-09-29 to 2026-11-03)
 
@@ -118,25 +117,27 @@ P11 and P12 were added later.
 | Project | Spend | Cuts | Restored | Est. net p50 | Net ÷ spend | musk's own cost ÷ spend | Basis |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P1 | 211M | 95 | 15 | 16.7M | 7.9% | 0.2% | harness |
-| P2 | 77M | 24 | 3 | 1.1M | 1.5% | 0.5% | harness |
-| P3 | 106M | 37 | 2 | 7.7M | 7.2% | 0.3% | harness |
+| P2 | 77M | 26 | 3 | 1.3M | 1.6% | 0.5% | harness |
+| P3 | 107M | 37 | 2 | 7.6M | 7.1% | 0.4% | harness |
 | P4 | 43M | 13 | 0 | 8.6M | 19.9%¹ | 0.7% | prior |
-| P5 | 40M | 34 | 3 | 3.2M | 7.9% | 1.0% | harness |
-| P6 | 51M | 44 | 7 | 5.8M | 11.3% | 0.3% | prior |
-| P7 | 21M | 9 | 0 | 0.7M | 3.4% | 0.2% | harness |
-| P8 | 33M | 16 | 0 | 1.1M | 3.3% | 0.5% | harness |
-| P9 | 90M | 25 | 0 | 0.7M | 0.8% | 0.1% | harness |
+| P5 | 40M | 34 | 3 | 3.2M | 8.0% | 0.9% | harness |
+| P6 | 56M | 44 | 7 | 2.6M | 4.7% | 0.3% | prior |
+| P7 | 21M | 9 | 0 | 0.7M | 3.6% | 0.1% | harness |
+| P8 | 33M | 16 | 0 | 1.1M | 3.4% | 0.4% | harness |
+| P9 | 91M | 25 | 0 | 0.7M | 0.8% | 0.1% | harness |
 | P10 | 9M | 4 | 0 | 0.4M | 4.0% | 0.9% | prior |
 | P11 | 56M² | 7 | 3 | 1.3M | 2.4% | <0.1% | prior |
 | P12 | 9M | 3 | 1 | 0.1M | 0.9% | 0.9% | harness |
-| **All** | **746M** | **311** | **34** | **47.4M** | **6.4%** aggregate, **3.7%** median | **0.3%** | |
+| **All** | **752M** | **313** | **34** | **44.3M** | **5.9%** aggregate, **3.8%** median | **0.3%** | |
 
 How the table was built. Claude Code deletes transcripts after 30 days, so the sessions before
 about 2026-10-06 are gone from this machine. Spend is therefore the spend measured for the first
 table (up to 2026-10-25 03:41 UTC, when it was taken) plus all tokens since, which are all still
-present. musk's own cost is the larger of the cost measured then and today's estimate, whose
-ledger floor counts every pass row. Prices come from the transcripts that remain, so a P1–P10 cut
-from the first weeks can price differently than in the first table.
+present. musk's own cost is likewise the cost measured then plus the cost since (fragments from
+transcripts, with the ledger filling in missing runs, plus musk skill runs). Prices come from the transcripts that remain, so a P1–P10 cut
+from the first weeks can price differently than in the first table. P6, for example, now has
+enough executed plans for a measured task price (about 40k, against the 110k prior), which halves
+its estimate.
 
 ¹ Inflated: two plan steps were logged as `phase-merge` (priced at 35% of a phase each) and two
 plan-level features at milestone level. Without them P4 is about 4%.
@@ -163,9 +164,9 @@ back:
 The first two are now on the planner's never-cut list (v0.4.5).
 
 **What the five weeks showed:**
-- **Typical saving about 4% of spend** (median 3.7%, aggregate 6.4%), with a tail to about 11% on
+- **Typical saving about 4% of spend** (median 3.8%, aggregate 5.9%), with a tail to about 8% on
   projects with roadmap bloat. musk's own cost is about 0.3% of spend, so on these estimates it
-  pays for itself about 20×.
+  pays for itself about 18×.
 - **Most of the value is scope and implementation cuts.** The lean lane fired once in five weeks,
   consistent with the 7% eligibility estimate above.
 - **Reminders depend on the verify:post step, which rarely ran.** One project recorded 3

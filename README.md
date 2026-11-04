@@ -54,7 +54,7 @@ a hundred phases of it, and one deferred requirement pays for about a thousand.
 - **40% of plans carry only 1–2 tasks**, yet each one still pays for its own executor spawn,
   SUMMARY, state updates and commit.
 - A median phase directory holds **14 artifacts**. Musk's
-**lean lane** gives small phases the flow they deserve: no questioning, no researcher, one plan.
+**lean lane** gives small phases the flow they deserve: no questioning, no researcher or pattern mapper, one plan.
 The planner rules stop 1-task plans from being written at all. Honest sizing: only about 7% of
 real phases are small enough for the lean lane. As built, it saves about 5% of a small phase's
 tokens, so ceremony savings come to roughly 0.4% of total tokens. Rerouting small phases to
@@ -78,8 +78,8 @@ automate, and only later notice the thing shouldn't exist. Musk runs the steps i
 - Implementation cuts never remove a sourced requirement.
 - Unattended cuts are marked `inferred` and come up for review at the retro.
 
-**Five weeks, measured.** On 12 projects (746M tokens), musk's estimated net saving was
-**3.7% of spend for the median project** and 6.4% in aggregate, at a cost of about 0.3% of spend.
+**Five weeks, measured.** On 12 projects (752M tokens), musk's estimated net saving was
+**3.8% of spend for the median project** and 5.9% in aggregate, at a cost of about 0.3% of spend.
 Of 217 cuts reviewed at retros, 15.7% were restored. Details: [docs/stats.md](docs/stats.md#in-use-weeks-15-2026-09-29-to-2026-11-03).
 
 **6. It measures itself honestly.** Every cut is priced from **your own** token usage, parsed
@@ -95,7 +95,7 @@ installed, and it tells you when a manual step is due. Nothing else asks for you
 
 ```bash
 node ~/.claude/gsd-core/bin/gsd-tools.cjs capability install \
-  https://github.com/bitcreed/gsd-musk-simplification.git#v0.5.4 --scope global
+  https://github.com/bitcreed/gsd-musk-simplification.git#v0.5.5 --scope global
 node ~/.claude/gsd-core/bin/gsd-tools.cjs capability set musk --on --runtime claude   # stage the skills now
 ```
 
