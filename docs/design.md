@@ -132,15 +132,18 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
   to phase (`phases/<NN>-…`) and plan (`<NN>-<PP>-PLAN.md`).
 - Attribute main-session tokens to the GSD command in effect (`<command-name>/gsd-…` user
   messages or a `Skill` call), to catch orchestrator cost per phase. A musk run is bounded: it
-  ends after its `musk commit` call, or at a human message whose reply does no musk work (no
+  ends after its `musk commit` call (also one in an agent it spawned: the run ends when that agent
+  finishes), at another GSD command, or at a human message whose reply does no musk work (no
   `gsd-tools musk`, `gsd_run musk` or `"$GSD_TOOLS" musk` call, nothing written under
   `.planning/musk/`). Task notifications and compaction summaries are not human messages. The
   interrupted command then resumes (a musk skill invoked inside a command keeps its phase), so
-  host work after a musk run is not charged to musk. A non-musk skill the run invokes
-  (`/gsd-phase`, `/gsd-capture`: applying a cut) stays in the run.
-- Ownership follows the spawn graph, whatever the agent's role or its prompt says: agents spawned
-  during a musk run, and their children, are charged to it, also when a `gsd-*` agent invoked the
-  musk skill. A quick task is one sample: the `/gsd-quick` segment plus every agent spawned inside
+  host work after a musk run is not charged to musk. The GSD skills musk's own skills invoke
+  (`/gsd-phase`, `/gsd-capture`, `/gsd-review-backlog`: applying or restoring a cut) stay in the run.
+- Ownership follows the spawn graph: agents spawned during a musk run, and their children, are
+  charged to it, also when a `gsd-*` agent invoked the musk skill. Host work is not: an agent of a
+  phase type (executor, planner, verifier, …), one whose description names a phase, plan or
+  milestone step, or whose prompt runs a phase or milestone command, and an agent's own GSD
+  command other than the ones above. A quick task is one sample: the `/gsd-quick` segment plus every agent spawned inside
   it, down to grandchildren, whatever quick id their prompts carry.
 - Derived prices (only when n ≥ 5 samples in this project, else `null`):
   `per_task`, `per_plan_overhead` (least-squares fit of executor tokens = a + b·tasks),

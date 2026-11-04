@@ -272,7 +272,7 @@ test('grandchildren of a musk run are charged to it; a quick task is one sample 
   const sub = (id, lines) => p.write(path.join(p.dir, 's1', 'subagents', `agent-${id}.jsonl`), lines);
   sub('a', [
     { type: 'user', timestamp: ts(), message: { role: 'user', content: 'cut' } },
-    asst(100, [tool('Agent', { subagent_type: 'gsd-planner', description: 'check', prompt: 'check' }, 'toolu_b')]),
+    asst(100, [tool('Agent', { subagent_type: 'general-purpose', description: 'check', prompt: 'check' }, 'toolu_b')]),
     result('toolu_b', 'done', 'b'),
   ]);
   sub('b', [{ type: 'user', timestamp: ts(), message: { role: 'user', content: 'check' } }, asst(1000)]);
@@ -342,4 +342,101 @@ test('pass cost: a plan pass row counts without transcripts; ledger runs only fi
   const c = passCost(deps, rows, cal, null);
   assert.deepEqual(c.injections, { discuss: 2, plan: 0 });
   assert.equal(c.fragment_tokens, (100 + 50) + 100, 'the evidenced run keeps its lean tag');
+});
+
+// A musk run ends when its spawn tree commits; host work spawned later is not musk's.
+const launched = (id, agentId) => { n++; return { type: 'user', timestamp: ts(), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Async agent launched' }] }, toolUseResult: { isAsync: true, status: 'async_launched', agentId } }; };
+const notify = (id, agentId) => { n++; return { type: 'user', timestamp: ts(), message: { role: 'user', content: `<task-notification>\n<task-id>${agentId}</task-id>\n<tool-use-id>${id}</tool-use-id>\n<status>completed</status>` } }; };
+
+test('a musk run ends when a child that ran musk commit finishes; later host work resumes the command', () => {
+  const p = project();
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-execute-phase', '2'),
+    asst(1000),
+    cmd('/gsd-musk-retro'),
+    asst(100, [tool('Agent', { subagent_type: 'general-purpose', description: 'Run musk retro', prompt: 'Run the retro' }, 'toolu_mr')]),
+    launched('toolu_mr', 'mr'),
+    asst(50),
+    notify('toolu_mr', 'mr'),
+    asst(30, [tool('Agent', { subagent_type: 'general-purpose', description: 'Tidy', prompt: 'tidy things' }, 'toolu_w')]),
+    result('toolu_w', 'done', 'w'),
+    asst(5000),
+  ]);
+  p.write(path.join(p.dir, 's1', 'subagents', 'agent-mr.jsonl'), [
+    { type: 'user', timestamp: ts(), message: { role: 'user', content: 'Run the retro' } },
+    asst(200, [tool('Skill', { skill: 'gsd-musk-retro' })]),
+    asst(300, [tool('Bash', { command: 'gsd-tools musk commit --message "musk: retro"' })]),
+  ]);
+  p.write(path.join(p.dir, 's1', 'subagents', 'agent-w.jsonl'), [
+    { type: 'user', timestamp: ts(), message: { role: 'user', content: 'tidy things' } },
+    asst(7000),
+  ]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-retro'].tokens_total, 100 + 50 + 200 + 300);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-execute-phase'].tokens_total, 1000 + 30 + 5000);
+  assert.equal(c.by_agent_type['general-purpose'].tokens_total, 7000);
+});
+
+test('agents a musk run spawns for phase work are not musk-owned, nor their children', () => {
+  const p = project();
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-musk-roadmap'),
+    asst(10, [tool('Agent', { subagent_type: 'general-purpose', description: 'Execute Phase 31', prompt: 'go' }, 'toolu_x')]),
+    result('toolu_x', 'done', 'x'),
+    asst(20, [tool('Agent', { subagent_type: 'general-purpose', description: 'Gap closure', prompt: 'Run /gsd-plan-phase 31 --gaps' }, 'toolu_y')]),
+    result('toolu_y', 'done', 'y'),
+    asst(30, [tool('Agent', { subagent_type: 'gsd-planner', description: 'Planner', prompt: 'plan' }, 'toolu_z')]),
+    result('toolu_z', 'done', 'z'),
+  ]);
+  const sub = (id, lines) => p.write(path.join(p.dir, 's1', 'subagents', `agent-${id}.jsonl`), lines);
+  sub('x', [
+    { type: 'user', timestamp: ts(), message: { role: 'user', content: 'go' } },
+    asst(100, [tool('Agent', { subagent_type: 'gsd-executor', description: 'exec', prompt: 'exec' }, 'toolu_e')]),
+    result('toolu_e', 'done', 'e'),
+  ]);
+  sub('e', [{ type: 'user', timestamp: ts(), message: { role: 'user', content: 'exec' } }, asst(1000)]);
+  sub('y', [{ type: 'user', timestamp: ts(), message: { role: 'user', content: 'Run /gsd-plan-phase 31 --gaps' } }, asst(2000)]);
+  sub('z', [{ type: 'user', timestamp: ts(), message: { role: 'user', content: 'plan' } }, asst(4000)]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-roadmap'].tokens_total, 10 + 20 + 30);
+  assert.equal(c.by_agent_type['general-purpose'].tokens_total, 100 + 2000);
+  assert.equal(c.by_agent_type['gsd-executor'].tokens_total, 1000);
+  assert.equal(c.by_agent_type['gsd-planner'].tokens_total, 4000);
+});
+
+test('only skills musk itself invokes stay in a musk run; another GSD command ends it', () => {
+  const p = project();
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-discuss-phase', '4'),
+    asst(100, [tool('Skill', { skill: 'gsd-musk-roadmap', args: 'auto' })]),
+    asst(200, [tool('Skill', { skill: 'gsd-review-backlog' })]),
+    asst(300, [tool('Skill', { skill: 'gsd-execute-phase', args: '4' })]),
+    asst(400),
+  ]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-roadmap'].tokens_total, 200 + 300);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-execute-phase'].tokens_total, 400);
+});
+
+test('a musk-owned agent that runs another GSD command, or completes a milestone, does host work', () => {
+  const p = project();
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-musk-retro'),
+    asst(10, [tool('Agent', { subagent_type: 'general-purpose', description: 'Retro helper', prompt: 'help' }, 'toolu_h')]),
+    result('toolu_h', 'done', 'h'),
+    asst(20, [tool('Agent', { subagent_type: 'general-purpose', description: 'Complete milestone v2', prompt: 'finish' }, 'toolu_m')]),
+    result('toolu_m', 'done', 'm'),
+  ]);
+  const sub = (id, lines) => p.write(path.join(p.dir, 's1', 'subagents', `agent-${id}.jsonl`), lines);
+  sub('h', [
+    { type: 'user', timestamp: ts(), message: { role: 'user', content: 'help' } },
+    asst(100, [tool('Skill', { skill: 'gsd-capture', args: '--note x' })]),
+    asst(200, [tool('Skill', { skill: 'gsd-stats' })]),
+    asst(300),
+  ]);
+  sub('m', [{ type: 'user', timestamp: ts(), message: { role: 'user', content: 'finish' } }, asst(5000)]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-musk-retro'].tokens_total, 10 + 20 + 100 + 200);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-stats'].tokens_total, 300);
+  assert.equal(c.by_agent_type['general-purpose'].tokens_total, 5000);
 });
