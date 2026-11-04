@@ -56,8 +56,8 @@ a hundred phases of it, and one deferred requirement pays for about a thousand.
 - A median phase directory holds **14 artifacts**. Musk's
 **lean lane** gives small phases the flow they deserve: no questioning, no researcher, one plan.
 The planner rules stop 1-task plans from being written at all. Honest sizing: only about 7% of
-real phases are small enough for the lean lane. As built, it saves about 6% of a small phase's
-tokens, so ceremony savings come to roughly 0.5% of total tokens. Rerouting small phases to
+real phases are small enough for the lean lane. As built, it saves about 5% of a small phase's
+tokens, so ceremony savings come to roughly 0.4% of total tokens. Rerouting small phases to
 `/gsd-quick` outright would be worth up to 7%, but needs core seam #3 (see
 [docs/stats.md](docs/stats.md) for the arithmetic). The bigger lever is point 2, cutting
 scope before it's built. That can't be estimated from history; the ledger will measure it.

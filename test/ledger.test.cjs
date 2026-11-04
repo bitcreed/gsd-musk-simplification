@@ -116,6 +116,15 @@ test('every manifest step command passes gsd-core\'s ref.command grammar and nam
   }
 });
 
+test('the lean lane writes every artifact plan-phase checks before it would spawn or stop', () => {
+  // plan-phase: RESEARCH.md skips the researcher (§5), PATTERNS.md the pattern mapper (§7.8), and
+  // the Nyquist gate (§7.5) stops for the user unless a VALIDATION.md exists.
+  const frag = fs.readFileSync(path.join(__dirname, '..', 'fragments', 'discuss-pre-lean.md'), 'utf8');
+  for (const f of ['RESEARCH', 'PATTERNS', 'VALIDATION']) assert.match(frag, new RegExp(`<padded>-${f}\\.md`));
+  for (const k of ['phase', 'slug', 'status: draft', 'nyquist_compliant: false', 'wave_0_complete: false', 'created']) assert.ok(frag.includes(`\`${k}\``), k);
+  assert.doesNotMatch(frag, /Validation Architecture/, 'a stub with that section would arm the checker\'s Dimension 8');
+});
+
 test('append after a torn last line keeps the new row readable', () => {
   const ctx = setup('proj');
   const ledgerFile = path.join(ctx.cwd, '.planning/musk/ledger.jsonl');
