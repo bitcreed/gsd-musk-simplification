@@ -86,6 +86,10 @@ Declared with types in `capability.json`; what each does is in the README's *Con
   - impl: `task`, `file`, `dep`, `flag`, `abstraction`, `layer`, `test`, `doc`
   - ceremony: `lean-lane`, `reroute-quick`, `reroute-fast`, `plan-merge`, `phase-merge`, `step-skip`
   `qty` (default 1) lets one row stand for several identical units (e.g. 3 tasks).
+- `.planning/musk/.ledger.lock` — held while a writer reads, allocates an id and appends. It names
+  its owner (pid, host, token, time). It is reclaimed only when the owner's pid is gone on this
+  host, or after 10 minutes for another host or an unreadable owner; never for age alone, since a
+  paused writer still holds it. Release checks the token.
 - `.planning/musk/calibration.json` — written by `musk calibrate` (see below).
 - `.planning/musk/MILESTONE-<slug>.md` — one-shot marker + report of the milestone pass.
 

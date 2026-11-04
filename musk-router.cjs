@@ -7,7 +7,8 @@
  * Synchronous (the gsd-tools dispatcher rejects Promise-returning routers). Output is plain text,
  * or a single JSON document when --json / --raw / `raw` is given.
  *
- * deps (all optional, for tests): fs, homedir(), now(), stdout(str), capRoot.
+ * deps (all optional, for tests): fs, homedir(), now(), stdout(str), capRoot, and for the ledger
+ * lock pid, hostname(), pidAlive(pid).
  */
 
 const fs = require('node:fs');
@@ -52,6 +53,10 @@ function makeDeps(deps = {}) {
     env: deps.env || process.env,
     git: deps.git,
     commit: deps.commit || gsdCommit,
+    // ledger lock owner identity and liveness (lib/ledger.cjs defaults to the real ones)
+    pid: deps.pid,
+    hostname: deps.hostname,
+    pidAlive: deps.pidAlive,
   };
 }
 
