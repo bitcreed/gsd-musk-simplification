@@ -110,15 +110,23 @@ function commitVerdict(status, stdout, stderr = '') {
 
 // commit_docs as the INVOKING checkout sets it. musk state is committed in the main checkout, so
 // gsd-tools sees the main checkout's policy; a worktree or workstream that turned docs commits off
-// must not have musk commit them anyway.
-function commitDocsOff(d, P) {
-  for (const dir of new Set([P.rootPlanDir, P.planDir])) {
-    let cfg = {};
-    try { cfg = JSON.parse(d.fs.readFileSync(path.join(dir, 'config.json'), 'utf8')); } catch { continue; }
-    const v = cfg.commit_docs ?? (cfg.planning && cfg.planning.commit_docs);
-    if (v === false) return true;
+// must not have musk commit them anyway. Resolved as gsd-core's loadConfig does: the workstream
+// config deep-merged over the root one, then the flat key before `planning.commit_docs`.
+function deepMerge(base, over) {
+  const out = { ...base };
+  for (const [k, v] of Object.entries(over)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    out[k] = v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object' ? deepMerge(base[k], v) : v;
   }
-  return false;
+  return out;
+}
+function commitDocsOff(d, P) {
+  let cfg = {};
+  for (const dir of new Set([P.rootPlanDir, P.planDir])) {
+    try { cfg = deepMerge(cfg, JSON.parse(d.fs.readFileSync(path.join(dir, 'config.json'), 'utf8')) || {}); } catch { /* absent or unreadable: next */ }
+  }
+  const v = cfg.commit_docs !== undefined ? cfg.commit_docs : cfg.planning && cfg.planning.commit_docs;
+  return v === false;
 }
 
 function commitMusk(d, P, message) {

@@ -108,7 +108,7 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
 | `calibrate` | `[--since <ISO>] [--json]` | Read Claude Code transcripts for this project only; write `calibration.json`. |
 | `stats` | `[--phase N] [--json] [--record]` | Report counts, add-back ratio, estimated gross savings (p25/p50/p75), pass cost, net. `--record` appends a `snapshot` row. |
 | `record` | | The `verify:post` step: refresh calibration, append a `snapshot` row, commit `.planning/musk/`, print one line. Same as `stats --record` (manifest commands may not carry flags). |
-| `commit` | `[--message]` | The `execute:post` step: commit `.planning/musk/` through `gsd-tools query commit`. Skips when the invoking checkout sets `commit_docs: false`. |
+| `commit` | `[--message]` | The `execute:post` step: commit `.planning/musk/` through `gsd-tools query commit`. Skips when the invoking checkout's effective `commit_docs` is `false` (workstream config over the root, as gsd-core merges them). |
 
 ### Calibration (Claude Code runtime)
 

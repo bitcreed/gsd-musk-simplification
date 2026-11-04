@@ -167,3 +167,22 @@ test('musk commit honours commit_docs: false in the invoking checkout', () => {
   assert.equal(run(ctx, ['commit']).reason, 'skipped_commit_docs_false');
   assert.equal((ctx.commits || []).length, 0);
 });
+
+test('musk commit resolves commit_docs as gsd-core does: workstream config over the root', () => {
+  const ctx = setup('proj');
+  run(ctx, cut());
+  const env = { GSD_WORKSTREAM: 'w1' };
+  const ws = path.join(ctx.cwd, '.planning/workstreams/w1');
+  fs.mkdirSync(ws, { recursive: true });
+  const both = (root, wsCfg) => {
+    fs.writeFileSync(path.join(ctx.cwd, '.planning/config.json'), JSON.stringify(root));
+    fs.writeFileSync(path.join(ws, 'config.json'), JSON.stringify(wsCfg));
+    return run(ctx, ['commit'], { env }).reason;
+  };
+  assert.equal(both({ planning: { commit_docs: false } }, { planning: { commit_docs: true } }), 'committed');
+  assert.equal(both({ planning: { commit_docs: true } }, { planning: { commit_docs: false } }), 'skipped_commit_docs_false');
+  assert.equal(both({ commit_docs: true }, { commit_docs: false }), 'skipped_commit_docs_false');
+  assert.equal(both({ commit_docs: false }, { musk: { enabled: true } }), 'skipped_commit_docs_false');
+  // without the workstream, only the root config applies
+  assert.equal(run(ctx, ['commit']).reason, 'skipped_commit_docs_false');
+});
