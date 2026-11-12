@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.6 (2026-11-12)
 
 - **Worktree ledger rows are committed with the plans they belong to.** A musk command run in a
   linked git worktree (an isolated planner or executor) used to append to the main checkout's
