@@ -57,6 +57,7 @@ function makeDeps(deps = {}) {
     pid: deps.pid,
     hostname: deps.hostname,
     pidAlive: deps.pidAlive,
+    randomBytes: deps.randomBytes,
   };
 }
 
@@ -113,9 +114,9 @@ function commitVerdict(status, stdout, stderr = '') {
   return error ? { ok, reason, error } : { ok, reason };
 }
 
-// commit_docs as the INVOKING checkout sets it. musk state is committed in the main checkout, so
-// gsd-tools sees the main checkout's policy; a worktree or workstream that turned docs commits off
-// must not have musk commit them anyway. Resolved as gsd-core's loadConfig does: the workstream
+// commit_docs as the INVOKING checkout sets it. musk state may be committed in the main checkout
+// (a worktree without .planning), where gsd-tools sees the main checkout's policy; a worktree or
+// workstream that turned docs commits off must not have musk commit them anyway. Resolved as gsd-core's loadConfig does: the workstream
 // config deep-merged over the root one, then the flat key before `planning.commit_docs`.
 function deepMerge(base, over) {
   const out = { ...base };
@@ -135,10 +136,10 @@ function commitDocsOff(d, P) {
 }
 
 function commitMusk(d, P, message) {
-  const rel = path.relative(P.mainRoot, path.join(P.stateDir, 'musk')) || '.planning/musk';
+  const rel = path.relative(P.stateRoot, path.join(P.stateDir, 'musk')) || '.planning/musk';
   if (!d.fs.existsSync(path.join(P.stateDir, 'musk'))) return { ok: true, reason: 'nothing_to_commit' };
   if (commitDocsOff(d, P)) return { ok: true, reason: 'skipped_commit_docs_false' };
-  try { return d.commit(P.mainRoot, message, [rel + '/']); } catch (e) { return { ok: false, reason: 'failed', error: e.message }; }
+  try { return d.commit(P.stateRoot, message, [rel + '/']); } catch (e) { return { ok: false, reason: 'failed', error: e.message }; }
 }
 
 // milestone-check plus the settings in effect and `pass_due`: the milestone pass never ran, it is
@@ -166,9 +167,17 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   const json = Boolean(raw || flags.json || flags.raw);
   const root = cwd || process.cwd();
   // planDir: planning reads (this checkout + workstream). stateDir: musk's ledger, calibration and
-  // markers, always in the main checkout so a linked worktree's writes are not lost.
+  // markers, in this checkout's .planning like GSD's own docs (lib/paths.cjs).
   const P = paths.resolve(d, root);
   const { planDir, stateDir, rootPlanDir } = P;
+  // A linked worktree (an isolated agent) is merged and reaped by someone else, who never sweeps
+  // up its uncommitted files: each ledger write is committed on the worktree's branch at once.
+  const wtCommit = (what) => {
+    if (!P.linked) return '';
+    const c = commitMusk(d, P, `docs(musk): ${what}`);
+    return c.ok ? '' : ` (musk files not committed: ${c.reason})`;
+  };
+  const idOpts = { suffix: P.linked ? ledger.idSuffix(d) : null };
   const now = () => d.now().toISOString();
   const emit = (obj, text) => d.stdout((json ? JSON.stringify(obj, null, 2) : text) + '\n');
 
@@ -183,12 +192,13 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
 
   if (sub === 'log') {
     const { row, error: err } = ledger.withLock(d, stateDir, () => {
-      const r = ledger.buildCut(ledger.readLedger(d, stateDir), flags, now());
+      const r = ledger.buildCut(ledger.readLedger(d, stateDir), flags, now(), idOpts);
       if (r.row) ledger.append(d, stateDir, r.row);
       return r;
     });
     if (err) return fail(err);
-    return emit(row, row.id);
+    const note = wtCommit(`${row.id} ${row.class} cut`);
+    return emit(note ? { ...row, warning: note.trim() } : row, row.id + note);
   }
 
   if (sub === 'confirm') {
@@ -208,7 +218,8 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
       return { added: out };
     });
     if (err) return fail(err);
-    return emit(added, added.map((r) => `${r.id} confirmed`).join('\n'));
+    const note = wtCommit(`confirm ${added.map((r) => r.id).join(' ')}`);
+    return emit(added, added.map((r) => `${r.id} confirmed`).join('\n') + note);
   }
 
   if (sub === 'reinstate') {
@@ -218,7 +229,8 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
       return r;
     });
     if (err) return fail(err);
-    return emit(row, `${row.id} reinstated`);
+    const note = wtCommit(`reinstate ${row.id}`);
+    return emit(row, `${row.id} reinstated${note}`);
   }
 
   if (sub === 'list') {
@@ -233,7 +245,8 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     const { row, error: err } = ledger.buildPass(flags, now());
     if (err) return fail(err);
     ledger.withLock(d, stateDir, () => ledger.append(d, stateDir, row));
-    return emit(row, `musk: pass recorded for phase ${row.phase}`);
+    const note = wtCommit(`phase ${row.phase} pass`);
+    return emit(row, `musk: pass recorded for phase ${row.phase}${note}`);
   }
 
   if (sub === 'phase-check') {

@@ -1,8 +1,8 @@
 'use strict';
 
 // musk must catch every phase and keep its state in one place: a pass marker per phase, a
-// plan:pre safety net, ledger writes resolved to the main checkout from a linked git worktree,
-// and planning reads that follow GSD_WORKSTREAM.
+// plan:pre safety net, ledger writes that stay in (and are committed on) the linked git worktree
+// they were made in, and planning reads that follow GSD_WORKSTREAM.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -88,21 +88,43 @@ test('phase-check: quick tasks and opted-out projects are a no-op', () => {
   assert.throws(() => run(ctx, ['pass']), /--phase/);
 });
 
-test('worktree: ledger writes and reads go to the main checkout, not the stale committed copy', () => {
+// What gsd-tools query commit does with --files: commit only those paths.
+const realCommit = (cwd, message, files) => {
+  git(cwd, 'add', '--', ...files);
+  git(cwd, 'commit', '-qm', message, '--', ...files);
+  return { ok: true, reason: 'committed' };
+};
+const clean = (dir) => git(dir, 'status', '--porcelain').trim();
+
+test('worktree: ledger rows land in the worktree, committed on its branch; main stays clean', () => {
   const { ctx, wt } = repoWithWorktree();
-  // main checkout moves on with an uncommitted row the worktree cannot see in its own tree
-  run(ctx, ['pass', '--phase', '4']);
-  assert.equal(ledgerOf(wt).length, 1);
+  const deps = { commit: realCommit };
+  run(ctx, ['pass', '--phase', '4', '--point', 'plan:pre'], { cwd: wt, deps });
+  const cut = run(ctx, ['log', '--class', 'impl', '--unit', 'task', '--ref', 'T', '--reason', 'x', '--phase', '4', '--point', 'plan:pre', '--inferred'], { cwd: wt, deps });
+  assert.match(cut.id, /^M-0001-[0-9a-f]{6}$/, 'a worktree id is unique without coordination');
+  run(ctx, ['confirm', cut.id], { cwd: wt, deps });
 
+  assert.equal(ledgerOf(wt).length, 4);
+  assert.equal(ledgerOf(ctx.cwd).length, 1, 'the main checkout ledger is never written');
+  assert.equal(clean(ctx.cwd), '', 'the main checkout stays clean');
+  assert.equal(clean(wt), '', 'every row is committed on the worktree branch');
   assert.equal(run(ctx, ['phase-check', '--phase', '4'], { cwd: wt }).recorded, true);
-  const cut = run(ctx, ['log', '--class', 'scope', '--unit', 'req', '--ref', 'R-1', '--reason', 'x', '--phase', '5', '--point', 'discuss:pre'], { cwd: wt });
-  assert.equal(cut.id, 'M-0001');
-  assert.equal(ledgerOf(ctx.cwd).length, 3);
-  assert.equal(ledgerOf(wt).length, 1, 'the worktree copy is never written');
+  assert.equal(run(ctx, ['milestone-check'], { cwd: wt }).marker, path.join('.planning', 'musk', 'MILESTONE-v1.1.md'));
+});
 
-  const mc = run(ctx, ['milestone-check'], { cwd: wt });
-  assert.equal(mc.marker, path.join(ctx.cwd, '.planning/musk/MILESTONE-v1.1.md'));
-  assert.equal(run(ctx, ['milestone-check']).marker, path.join('.planning', 'musk', 'MILESTONE-v1.1.md'));
+test('worktree: parallel branches merge their ledger rows without a conflict or an id clash', () => {
+  const { ctx, wt } = repoWithWorktree();
+  const wt2 = path.join(ctx.tmp, 'wt2');
+  git(ctx.cwd, 'worktree', 'add', '-q', wt2);
+  const deps = { commit: realCommit };
+  const log = (cwd) => run(ctx, ['log', '--class', 'impl', '--unit', 'task', '--ref', 'T', '--reason', 'x', '--phase', '4'], { cwd, deps }).id;
+  const a = log(wt);
+  const b = log(wt2);
+  assert.notEqual(a, b);
+  // The first commit of the ledger in main declared merge=union; branches made before it still merge.
+  for (const w of [wt, wt2]) git(ctx.cwd, 'merge', '-q', '--no-edit', git(w, 'rev-parse', 'HEAD').trim());
+  assert.deepEqual(ledgerOf(ctx.cwd).filter((r) => r.type === 'cut').map((r) => r.id).sort(), [a, b].sort());
+  assert.equal(run(ctx, ['log', '--class', 'impl', '--unit', 'task', '--ref', 'T', '--reason', 'x']).id, 'M-0002', 'main keeps plain numbers');
 });
 
 test('worktree: falls back to the checkout itself outside git or when main has no .planning', () => {
@@ -145,12 +167,4 @@ test('workstream: a single-milestone ROADMAP without a 🚧 marker owns all its 
   assert.equal(r.milestone, 'v2.0');
   assert.deepEqual(r.phases, ['6', '7']);
   assert.equal(r.run, true);
-});
-
-test('worktree: confirm reads and writes the main checkout ledger', () => {
-  const { ctx, wt } = repoWithWorktree();
-  const c = run(ctx, ['log', '--class', 'impl', '--unit', 'task', '--ref', 'x', '--reason', 'y', '--inferred']);
-  run(ctx, ['confirm', c.id], { cwd: wt });
-  assert.equal(run(ctx, ['list']).find((x) => x.id === c.id).unreviewed, false);
-  assert.equal(ledgerOf(wt).length, 1, 'the worktree copy is never written');
 });

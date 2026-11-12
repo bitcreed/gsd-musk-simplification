@@ -15,7 +15,7 @@ missing question, **should this exist, and at what size?**, and asks it wherever
 | Implementation & plans | every `plan:pre` (also `/gsd-quick`, not `/gsd-quick-batch`) | tasks, flags, layers, shims, docs, tests nobody asked for; fewest plans (≤3 tasks → one plan) |
 | Process | `/gsd-musk-retro` at milestone end | gates and steps that cost tokens and never caught anything |
 
-Every cut goes into `.planning/musk/ledger.jsonl`, and every phase's pass leaves a `pass` row, cuts or not. A phase that reaches planning with no pass row (discuss skipped, or a hand-driven discuss that missed the hook) gets the pass at `plan:pre`. The ledger always lives in the main checkout: commands run from a linked git worktree (an isolated subagent) write there, not into the worktree's committed copy, and planning reads follow the active workstream. `gsd-tools musk stats` prices the cuts from
+Every cut goes into `.planning/musk/ledger.jsonl`, and every phase's pass leaves a `pass` row, cuts or not. A phase that reaches planning with no pass row (discuss skipped, or a hand-driven discuss that missed the hook) gets the pass at `plan:pre`. The ledger lives beside GSD's own planning docs: a command run in a linked git worktree (an isolated subagent) writes the worktree's ledger and commits it on the worktree's branch, so the rows merge with the plans they belong to. Planning reads follow the active workstream. `gsd-tools musk stats` prices the cuts from
 **your own measured token usage** (Claude Code transcripts of this project) and subtracts the
 pass's own cost. Transcripts of Claude Code worktrees under the project count too.
 

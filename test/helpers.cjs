@@ -20,7 +20,7 @@ function setup(name = 'proj', { transcripts = false } = {}) {
 }
 
 // Run the router; returns parsed JSON output (or text when json=false).
-function run(ctx, argv, { json = true, now = '2026-09-02T12:00:00.000Z', env = {}, cwd = ctx.cwd } = {}) {
+function run(ctx, argv, { json = true, now = '2026-09-02T12:00:00.000Z', env = {}, cwd = ctx.cwd, deps = {} } = {}) {
   let out = '';
   routeMuskCommand({
     args: ['musk', ...argv],
@@ -34,6 +34,7 @@ function run(ctx, argv, { json = true, now = '2026-09-02T12:00:00.000Z', env = {
       capRoot: path.join(FIX, 'cap'),
       commit: (cwd, message, files) => { (ctx.commits ||= []).push({ cwd, message, files }); return { ok: true, reason: 'committed' }; },
       env,
+      ...deps,
     },
   });
   return json ? JSON.parse(out) : out;
