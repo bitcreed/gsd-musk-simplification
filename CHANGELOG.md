@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.7 (2026-11-13)
 
 - **`/gsd-quick-batch` items are quick-task samples.** Stats attributed a quick task only inside a
   `/gsd-quick` segment, so a batch's orchestrator and the agents it spawned fell outside
