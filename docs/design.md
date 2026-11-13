@@ -147,6 +147,16 @@ All output is plain text unless `--json` (or `raw`) is given, then a single JSON
   milestone step, or whose prompt runs a phase or milestone command, and an agent's own GSD
   command other than the ones above. A quick task is one sample: the `/gsd-quick` segment plus every agent spawned inside
   it, down to grandchildren, whatever quick id their prompts carry.
+- A `/gsd-quick-batch` segment owns its agents the same way, but as one sample per item: an agent
+  belongs to the item whose quick id it names (its description `Plan <id>: …`, `Item quick id:
+  <id>`, `quick-batch item <id>`, else the first `quick/<id>` path; the planner's batch catalog
+  lists every id, so the item markers come first), and its children follow it. The batch's shared
+  tokens, the orchestrator's own turns and any agent naming no item, are split evenly over the
+  run's identified items, so a batch item carries its share of orchestration as a `/gsd-quick`
+  task carries its whole orchestrator. [inferred] An even split, not per-item weighting: the
+  orchestrator's turns serve all items at once. A run with no identifiable item adds no sample; its
+  tokens stay in `orchestrator:/gsd-quick-batch`. Quick commands never take a phase from their
+  arguments (`--jobs 3`, "fix 2 typos").
 - Derived prices (only when n ≥ 5 samples in this project, else `null`):
   `per_task`, `per_plan_overhead` (least-squares fit of executor tokens = a + b·tasks),
   `per_phase` (all attributed tokens of a phase), `per_quick_task`, `per_req`

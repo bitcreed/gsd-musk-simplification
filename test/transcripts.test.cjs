@@ -440,3 +440,60 @@ test('a musk-owned agent that runs another GSD command, or completes a milestone
   assert.equal(c.by_agent_type['orchestrator:/gsd-stats'].tokens_total, 300);
   assert.equal(c.by_agent_type['general-purpose'].tokens_total, 5000);
 });
+
+test('quick-batch: each item is its own quick-task sample carrying an even share of the batch overhead', () => {
+  const p = project();
+  fs.writeFileSync(path.join(p.cwd, '.planning', 'ROADMAP.md'), '### Phase 3: C\n');
+  const quicks = ['260901-ab1', '260901-ab2', '260901-ab3', '260901-ab4', '260901-ab5'];
+  const catalog = quicks.map((q) => `| ${q} | see .planning/quick/${q}-tidy |`).join('\n');
+  const sub = (id, prompt, lines) => p.write(path.join(p.dir, 's1', 'subagents', `agent-${id}.jsonl`),
+    [{ type: 'user', timestamp: ts(), message: { role: 'user', content: prompt } }, ...lines]);
+  const lines = [cmd('/gsd-quick-batch', '--jobs 3 "tidy a" "tidy b"')];
+  for (const q of quicks) {
+    // The planner prompt lists the whole batch before naming its own item.
+    const prompt = `Full batch task catalog:\n${catalog}\n**Mode:** quick-batch\n**Item quick id:** ${q}\nOutput directory: .planning/quick/${q}-tidy`;
+    lines.push(asst(50, [tool('Agent', { subagent_type: 'gsd-planner', description: `Plan ${q}: tidy`, prompt }, `toolu_p${q}`)]));
+    lines.push(result(`toolu_p${q}`, 'done', `p${q}`));
+    sub(`p${q}`, prompt, [asst(100)]);
+  }
+  for (const q of quicks) {
+    const prompt = `Execute quick-batch item ${q}.\n- .planning/quick/${q}-tidy/${q}-PLAN.md`;
+    lines.push(asst(50, [tool('Agent', { subagent_type: 'gsd-executor', description: 'run item', prompt }, `toolu_e${q}`)]));
+    lines.push(result(`toolu_e${q}`, 'done', `e${q}`));
+    const kid = q === quicks[0] ? [tool('Agent', { subagent_type: 'general-purpose', description: 'look', prompt: 'grep the tree' }, 'toolu_k')] : undefined;
+    sub(`e${q}`, prompt, [asst(300, kid), ...(kid ? [result('toolu_k', 'done', 'k')] : [])]);
+  }
+  // An agent naming no item is batch overhead, like the orchestrator's own turns.
+  lines.push(asst(250, [tool('Agent', { subagent_type: 'general-purpose', description: 'survey', prompt: 'survey the repo' }, 'toolu_s')]));
+  lines.push(result('toolu_s', 'done', 's'));
+  sub('s', 'survey the repo', [asst(250)]);
+  sub('k', 'grep the tree', [asst(50)]);
+  p.write(path.join(p.dir, 's1.jsonl'), lines);
+  const c = calibrate(p.deps, p.cwd);
+  // Overhead 500 + 250 + 250 = 1000, 200 per item; an item is planner 100 + executor 300 (+ 50
+  // for the one whose executor spawned a helper).
+  assert.equal(c.samples.per_quick_task, 5);
+  assert.equal(c.prices.per_quick_task.p50, 600);
+  assert.equal(c.prices.per_quick_task.p75, 600);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-quick-batch'].tokens_total, 750);
+  assert.equal(c.by_agent_type['orchestrator:/gsd-quick-batch'].runs, 1);
+  assert.equal(c.by_agent_type['general-purpose'].tokens_total, 300);
+  assert.equal(c.by_phase['3'], undefined, '--jobs 3 is not phase 3');
+});
+
+test('quick-batch: a run whose items cannot be identified adds no sample; /gsd-quick args name no phase', () => {
+  const p = project();
+  fs.writeFileSync(path.join(p.cwd, '.planning', 'ROADMAP.md'), '### Phase 2: B\n');
+  p.write(path.join(p.dir, 's1.jsonl'), [
+    cmd('/gsd-quick-batch', '"a" "b"'),
+    asst(100, [tool('Agent', { subagent_type: 'general-purpose', description: 'survey', prompt: 'survey' }, 'toolu_s')]),
+    result('toolu_s', 'done', 's'),
+    cmd('/gsd-quick', 'fix 2 typos'),
+    asst(40),
+  ]);
+  p.write(path.join(p.dir, 's1', 'subagents', 'agent-s.jsonl'), [{ type: 'user', timestamp: ts(), message: { role: 'user', content: 'survey' } }, asst(60)]);
+  const c = calibrate(p.deps, p.cwd);
+  assert.equal(c.samples.per_quick_task, 1, 'only the /gsd-quick task');
+  assert.equal(c.by_agent_type['orchestrator:/gsd-quick-batch'].tokens_total, 100);
+  assert.equal(c.by_phase['2'], undefined);
+});

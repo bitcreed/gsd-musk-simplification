@@ -195,7 +195,8 @@ The first two are now on the planner's never-cut list (v0.4.5).
   includes per-plan overhead. *Phase* = all attributed tokens of a phase that had at least one
   executor run. *Requirement* = phase ÷ requirement IDs on its ROADMAP line. *Quick task* =
   tokens attributed to one quick-task id. Plans archived or renamed out of `.planning` are
-  excluded.
+  excluded. Since 0.5.7 each `/gsd-quick-batch` item is a quick task too, carrying an even share
+  of its batch's orchestration ([design.md](design.md)); the numbers here predate that.
 - **n-threshold:** a quantile is shown only when n ≥ 5 (`MIN_SAMPLES`). Pooled quantiles are
   taken over the concatenated samples, not over project medians.
 - **Plan overhead is not separable.** The least-squares fit `executor = a + b·tasks` has r² from

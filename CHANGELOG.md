@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **`/gsd-quick-batch` items are quick-task samples.** Stats attributed a quick task only inside a
+  `/gsd-quick` segment, so a batch's orchestrator and the agents it spawned fell outside
+  `per_quick_task`. A batch segment now owns its agents like `/gsd-quick` does, each agent counted
+  with the item whose quick id it names (and its children with it); the batch's shared tokens (the
+  orchestrator's turns, agents naming no item) are split evenly over the run's items. The planner's
+  batch catalog no longer makes every planner look like the first item.
+- A quick command's arguments no longer set a phase: `/gsd-quick-batch --jobs 3 …` or
+  `/gsd-quick fix 2 typos` charged the orchestrator to phase 3 or 2 when that phase existed.
+
 ## 0.5.6 (2026-11-12)
 
 - **Worktree ledger rows are committed with the plans they belong to.** A musk command run in a
