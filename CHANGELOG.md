@@ -10,6 +10,12 @@
   batch catalog no longer makes every planner look like the first item.
 - A quick command's arguments no longer set a phase: `/gsd-quick-batch --jobs 3 …` or
   `/gsd-quick fix 2 typos` charged the orchestrator to phase 3 or 2 when that phase existed.
+- **Docs: when `musk commit` runs.** gsd-core dispatches `execute:post` after phase execution and
+  after `/gsd-quick --full` only; plain `/gsd-quick` and `/gsd-quick-batch` never do. Ledger rows
+  their planners log in the main checkout stay uncommitted until the next `execute:post` (usually
+  the next phase execution) or `musk record` sweeps them; rows logged in a linked worktree are
+  committed at once. The docs said it ran after every `/gsd-quick`. This is an upstream gap,
+  listed as core seam #10.
 
 ## 0.5.6 (2026-11-12)
 

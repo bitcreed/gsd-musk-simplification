@@ -184,8 +184,10 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   if (!SUBS.includes(sub)) return fail(`unknown subcommand ${JSON.stringify(sub)}; expected one of ${SUBS.join(', ')}`);
 
   if (sub === 'commit') {
-    // execute:post step (phases and /gsd-quick): sweeps the ledger rows and calibration written
-    // during planning and execution into history, as GSD does with its own artifacts.
+    // execute:post step: sweeps the ledger rows and calibration written during planning and
+    // execution into history, as GSD does with its own artifacts. gsd-core dispatches it after
+    // phase execution and `/gsd-quick --full` only: plain /gsd-quick and /gsd-quick-batch never
+    // do (an upstream gap), so their main-checkout rows wait for the next execute:post.
     const r = commitMusk(d, P, flags.message || 'docs(musk): ledger and calibration');
     return emit(r, `musk: commit ${r.reason}`);
   }
