@@ -12,7 +12,7 @@ missing question, **should this exist, and at what size?**, and asks it wherever
 | Milestone | first discuss or plan of a milestone (one-shot), or `/gsd-musk-roadmap` | whole phases (to backlog), merges, unowned requirements |
 | Requirements | every `discuss:pre`; again at `plan:pre` for any phase with no recorded pass (proposed only: the requirement list is fixed by then) | requirements and success criteria with no owner; over-broad ones narrowed |
 | Ceremony | every `discuss:pre` | small phases take the **lean lane**: short discuss, no researcher, one plan |
-| Implementation & plans | every `plan:pre` (also `/gsd-quick`, not `/gsd-quick-batch`) | tasks, flags, layers, shims, docs, tests nobody asked for; fewest plans (≤3 tasks → one plan) |
+| Implementation & plans | every `plan:pre` (also `/gsd-quick` and each `/gsd-quick-batch` item, gsd-core ≥ 1.21.0) | tasks, flags, layers, shims, docs, tests nobody asked for; fewest plans (≤3 tasks → one plan) |
 | Process | `/gsd-musk-retro` at milestone end | gates and steps that cost tokens and never caught anything |
 
 Every cut goes into `.planning/musk/ledger.jsonl`, and every phase's pass leaves a `pass` row, cuts or not. A phase that reaches planning with no pass row (discuss skipped, or a hand-driven discuss that missed the hook) gets the pass at `plan:pre`. The ledger lives beside GSD's own planning docs: a command run in a linked git worktree (an isolated subagent) writes the worktree's ledger and commits it on the worktree's branch, so the rows merge with the plans they belong to. Planning reads follow the active workstream. `gsd-tools musk stats` prices the cuts from

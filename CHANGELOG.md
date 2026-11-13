@@ -16,6 +16,9 @@
   the next phase execution) or `musk record` sweeps them; rows logged in a linked worktree are
   committed at once. The docs said it ran after every `/gsd-quick`. This is an upstream gap,
   listed as core seam #10.
+- **Docs: `/gsd-quick-batch` planners get musk's `plan:pre` rules.** Since gsd-core 1.21.0 each
+  batch item's planner receives `into: planner` contributions; README and design.md said it did
+  not, and core seam #8 is marked landed.
 
 ## 0.5.6 (2026-11-12)
 
