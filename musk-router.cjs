@@ -177,6 +177,9 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     const c = commitMusk(d, P, `docs(musk): ${what}`);
     return c.ok ? '' : ` (musk files not committed: ${c.reason})`;
   };
+  // Commands that print a commit verdict also name musk files left dirty in the main checkout,
+  // where a command of the same run may have written (issue #1); "committed" must not hide them.
+  const foreignLine = (f) => `musk: uncommitted musk files in ${f.checkout}: ${f.files.join(', ')}. Commit them from that checkout (gsd-tools musk commit).`;
   const idOpts = { suffix: P.linked ? ledger.idSuffix(d) : null };
   const now = () => d.now().toISOString();
   const emit = (obj, text) => d.stdout((json ? JSON.stringify(obj, null, 2) : text) + '\n');
@@ -189,7 +192,8 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     // phase execution and `/gsd-quick --full` only: plain /gsd-quick and /gsd-quick-batch never
     // do (an upstream gap), so their main-checkout rows wait for the next execute:post.
     const r = commitMusk(d, P, flags.message || 'docs(musk): ledger and calibration');
-    return emit(r, `musk: commit ${r.reason}`);
+    const f = paths.foreignDirty(d, P);
+    return emit(f ? { ...r, foreign_dirty: f } : r, `musk: commit ${r.reason}` + (f ? `\n${foreignLine(f)}` : ''));
   }
 
   if (sub === 'log') {
@@ -307,7 +311,12 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     // --out writes elsewhere (e.g. a scratch dir) instead of the project's calibration.json.
     const file = flags.out ? path.resolve(flags.out) : cal.calibrationPath(stateDir);
     cal.writeCalibration(d, file, c);
-    return emit(c, textCalibration(c, file));
+    if (flags.out) return emit(c, textCalibration(c, file));
+    // The project's calibration is musk state like the ledger: committed where it was written.
+    const commit = commitMusk(d, P, 'docs(musk): calibration');
+    const f = paths.foreignDirty(d, P);
+    const text = textCalibration(c, file) + (commit.ok ? '' : ` (musk files not committed: ${commit.reason})`) + (f ? `\n${foreignLine(f)}` : '');
+    return emit({ ...c, commit, ...(f ? { foreign_dirty: f } : {}) }, text);
   }
 
   // stats; `record` is the verify:post step (`stats --record` before 0.5.3: a manifest command
@@ -335,6 +344,8 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     // verify:post: commit this phase's measurements with the rest of the phase's docs.
     const c = commitMusk(d, P, `docs(musk): phase ${s.phase || '?'} measurements`);
     if (!c.ok) line += ` (musk files not committed: ${c.reason})`;
+    const f = paths.foreignDirty(d, P);
+    if (f) line += `; uncommitted musk files in ${f.checkout} (${f.files.length}): commit them from that checkout`;
     d.stdout(line + '\n');
     return;
   }

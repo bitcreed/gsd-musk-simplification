@@ -67,6 +67,26 @@ test('calibrate: --since drops older messages; --out redirects the file', () => 
   assert.equal(c.totals.tokens, 0);
   assert.ok(fs.existsSync(out));
   assert.equal(fs.existsSync(path.join(ctx.cwd, '.planning/musk/calibration.json')), false);
+  assert.equal(ctx.commits, undefined, 'a scratch file is not committed');
+  assert.equal(c.commit, undefined);
+});
+
+test('calibrate: commits the project calibration like any other musk write', () => {
+  const ctx = setup('proj');
+  const c = run(ctx, ['calibrate']);
+  assert.deepEqual(c.commit, { ok: true, reason: 'committed' });
+  assert.deepEqual(ctx.commits, [{ cwd: ctx.cwd, message: 'docs(musk): calibration', files: ['.planning/musk/'] }]);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(ctx.cwd, '.planning/musk/calibration.json'), 'utf8')).commit, undefined, 'the verdict is not written into the file');
+  assert.equal(run(ctx, ['calibrate'], { json: false }).trim().split('\n').some((l) => /not committed/.test(l)), false, 'text says nothing on success');
+
+  const off = setup('proj');
+  fs.writeFileSync(path.join(off.cwd, '.planning/config.json'), JSON.stringify({ commit_docs: false }));
+  assert.equal(run(off, ['calibrate']).commit.reason, 'skipped_commit_docs_false');
+  assert.equal(off.commits, undefined);
+
+  const bad = setup('proj');
+  const text = run(bad, ['calibrate'], { json: false, deps: { commit: () => ({ ok: false, reason: 'failed', error: 'x' }) } });
+  assert.match(text, /\(musk files not committed: failed\)/);
 });
 
 test('calibrate: no transcripts -> basis none; stats fall back to labelled priors', () => {

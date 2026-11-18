@@ -91,6 +91,7 @@ test('phase-check: quick tasks and opted-out projects are a no-op', () => {
 // What gsd-tools query commit does with --files: commit only those paths.
 const realCommit = (cwd, message, files) => {
   git(cwd, 'add', '--', ...files);
+  if (!git(cwd, 'diff', '--cached', '--name-only', '--', ...files).trim()) return { ok: true, reason: 'nothing_to_commit' };
   git(cwd, 'commit', '-qm', message, '--', ...files);
   return { ok: true, reason: 'committed' };
 };
@@ -125,6 +126,64 @@ test('a leftover ledger lock is never committed', () => {
     assert.equal(git(dir, 'ls-files', '.planning/musk').split('\n').filter((f) => /\.ledger\.lock/.test(f)).length, 0);
     assert.equal(clean(dir), '', 'lock files are ignored, not left dirty');
   }
+});
+
+// The issue #1 sequence: a retro's commands spread over the main checkout and a worktree.
+test('worktree: musk state left dirty in the main checkout is named by commit and record', () => {
+  const { ctx, wt } = repoWithWorktree();
+  const deps = { commit: realCommit };
+  const real = (p) => fs.realpathSync(p);
+
+  // calibrate commits where it runs, so the main checkout stays clean
+  run(ctx, ['calibrate'], { deps });
+  assert.equal(clean(ctx.cwd), '');
+  let r = run(ctx, ['commit'], { cwd: wt, deps });
+  assert.equal(r.foreign_dirty, undefined, 'nothing to report when the main checkout is clean');
+
+  // a main-checkout ledger write waits for the next sweep there; the worktree's commit says so
+  run(ctx, ['log', '--class', 'impl', '--unit', 'task', '--ref', 'T', '--reason', 'x']);
+  fs.writeFileSync(path.join(ctx.cwd, '.planning/musk/RETRO-x.md'), 'r\n');
+  r = run(ctx, ['commit'], { cwd: wt, deps });
+  assert.equal(r.ok, true);
+  assert.equal(real(r.foreign_dirty.checkout), real(ctx.cwd));
+  assert.deepEqual(r.foreign_dirty.files, ['.planning/musk/RETRO-x.md', '.planning/musk/ledger.jsonl']);
+  const text = run(ctx, ['commit'], { cwd: wt, deps, json: false });
+  assert.match(text, /^musk: commit \w+\nmusk: uncommitted musk files in .+: \.planning\/musk\/RETRO-x\.md, \.planning\/musk\/ledger\.jsonl\. Commit them from that checkout \(gsd-tools musk commit\)\.\n$/);
+  assert.equal(clean(ctx.cwd).split('\n').length, 2, 'never committed across checkouts');
+
+  const rec = run(ctx, ['record'], { cwd: wt, deps, json: false });
+  assert.equal(rec.trim().split('\n').length, 1, 'record stays one line');
+  assert.match(rec, /; uncommitted musk files in .+ \(2\)/);
+  assert.equal(run(ctx, ['calibrate'], { cwd: wt, deps }).foreign_dirty.files.length, 2);
+
+  // run in the main checkout itself: no report, even with the worktree dirty
+  fs.writeFileSync(path.join(wt, '.planning/musk/RETRO-y.md'), 'r\n');
+  assert.equal(run(ctx, ['commit'], { deps: { commit: () => ({ ok: true, reason: 'committed' }) } }).foreign_dirty, undefined);
+});
+
+test('worktree: a lock file or a worktree without .planning reports nothing', () => {
+  const { ctx, wt } = repoWithWorktree();
+  const deps = { commit: realCommit };
+  // a repo whose .planning/musk predates the lock .gitignore
+  git(ctx.cwd, 'rm', '-q', '.planning/musk/.gitignore');
+  git(ctx.cwd, 'commit', '-qm', 'old layout');
+  fs.writeFileSync(path.join(ctx.cwd, '.planning/musk/.ledger.lock'), '{"pid":1}');
+  fs.writeFileSync(path.join(ctx.cwd, '.planning/musk/.ledger.lock.stale-abc'), '');
+  assert.match(clean(ctx.cwd), /ledger\.lock/);
+  assert.equal(run(ctx, ['commit'], { cwd: wt, deps }).foreign_dirty, undefined);
+
+  // a worktree without .planning writes and commits in the main checkout: nothing is foreign
+  const bare = setup('proj');
+  fs.writeFileSync(path.join(bare.cwd, 'README'), 'x\n');
+  git(bare.cwd, 'init', '-q');
+  git(bare.cwd, 'config', 'user.email', 't@t');
+  git(bare.cwd, 'config', 'user.name', 't');
+  git(bare.cwd, 'add', 'README');
+  git(bare.cwd, 'commit', '-qm', 'init');
+  const wt2 = path.join(bare.tmp, 'wt2');
+  git(bare.cwd, 'worktree', 'add', '-q', wt2);
+  run(bare, ['log', '--class', 'impl', '--unit', 'task', '--ref', 'T', '--reason', 'x']);
+  assert.equal(run(bare, ['commit'], { cwd: wt2 }).foreign_dirty, undefined);
 });
 
 test('worktree: parallel branches merge their ledger rows without a conflict or an id clash', () => {

@@ -1,7 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.5.8 (2026-11-18)
 
+- **A retro no longer leaves musk state uncommitted in another checkout** (#1). Each checkout
+  keeps its own `.planning/musk/` since 0.5.6, so a `/gsd-musk-retro` that ran `calibrate` in the
+  main checkout and the rest in a worktree left `calibration.json` dirty in the main checkout,
+  while `musk commit` in the worktree printed `committed`; its figures also came from the other
+  checkout's ledger. Three changes:
+  - The retro skill runs every command from the checkout it is in (musk reads the project's
+    transcripts from any checkout) and commits everything under `.planning/musk/`.
+  - `musk calibrate` commits `.planning/musk/` like the other writers (JSON `commit: {ok,
+    reason}`; `--out` commits nothing).
+  - `musk commit`, `record` and `calibrate`, run from a linked worktree, name musk files left
+    uncommitted in the main checkout (`foreign_dirty: {checkout, files}`) instead of hiding them
+    behind their own verdict. musk never commits in the other checkout.
 - **A leftover ledger lock is no longer committed.** `musk commit`, `musk record` and worktree
   ledger writes commit all of `.planning/musk/`, which swept in `.ledger.lock` when a writer had
   crashed or was mid-write. Every checkout of that branch then started with a held lock, and the
