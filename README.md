@@ -104,6 +104,22 @@ That's it: it is on in every GSD project, existing ones included. Opt a project 
 
 The skills appear as `/gsd-musk-roadmap` and `/gsd-musk-retro`. GSD prefixes third-party skill stems with `gsd-`.
 
+## Update
+
+Run the same two commands with the new tag. The second one matters: `capability install` updates
+the code, but the skills in `~/.claude/skills/gsd-musk-*` keep the old text until they are restaged.
+
+```bash
+node ~/.claude/gsd-core/bin/gsd-tools.cjs capability install \
+  https://github.com/bitcreed/gsd-musk-simplification.git#vX.Y.Z --scope global --yes
+node ~/.claude/gsd-core/bin/gsd-tools.cjs capability set musk --on --runtime claude   # restage the skills
+```
+
+Reinstalling gsd-core doesn't help: at the same version its installer copies nothing. gsd-core
+doesn't record the restaged skills' hashes ([core seam #11](docs/core-seams.md)), so its next
+update reports the `gsd-musk-*` skills as local edits and backs them up to `gsd-local-patches/`.
+Don't reapply those: the update restages the installed musk's skills itself.
+
 The capability ships a command module (`gsd-tools musk …`), so the installer asks for consent.
 The module reads `.planning/` and this project's transcripts under `~/.claude/projects/<slug>/`
 (plus `<slug>--claude-worktrees-*` for Claude Code worktrees).
