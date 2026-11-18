@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **A leftover ledger lock is no longer committed.** `musk commit`, `musk record` and worktree
+  ledger writes commit all of `.planning/musk/`, which swept in `.ledger.lock` when a writer had
+  crashed or was mid-write. Every checkout of that branch then started with a held lock, and the
+  commit carried the writer's hostname and pid. musk now writes `.planning/musk/.gitignore`
+  (`.ledger.lock*`) next to `.gitattributes`. A lock committed before this fix is still tracked:
+  `git rm --cached .planning/musk/.ledger.lock`.
+
 ## 0.5.7 (2026-11-13)
 
 - **`/gsd-quick-batch` items are quick-task samples.** Stats attributed a quick task only inside a

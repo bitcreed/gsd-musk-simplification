@@ -112,6 +112,21 @@ test('worktree: ledger rows land in the worktree, committed on its branch; main 
   assert.equal(run(ctx, ['milestone-check'], { cwd: wt }).marker, path.join('.planning', 'musk', 'MILESTONE-v1.1.md'));
 });
 
+test('a leftover ledger lock is never committed', () => {
+  const { ctx, wt } = repoWithWorktree();
+  const deps = { commit: realCommit };
+  for (const dir of [ctx.cwd, wt]) {
+    fs.writeFileSync(path.join(dir, '.planning/musk/.ledger.lock'), '{"pid":1,"host":"x"}');
+    fs.writeFileSync(path.join(dir, '.planning/musk/.ledger.lock.stale-abc'), '');
+  }
+  run(ctx, ['commit'], { deps });
+  run(ctx, ['commit'], { cwd: wt, deps });
+  for (const dir of [ctx.cwd, wt]) {
+    assert.equal(git(dir, 'ls-files', '.planning/musk').split('\n').filter((f) => /\.ledger\.lock/.test(f)).length, 0);
+    assert.equal(clean(dir), '', 'lock files are ignored, not left dirty');
+  }
+});
+
 test('worktree: parallel branches merge their ledger rows without a conflict or an id clash', () => {
   const { ctx, wt } = repoWithWorktree();
   const wt2 = path.join(ctx.tmp, 'wt2');
