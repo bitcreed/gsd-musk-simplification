@@ -1,0 +1,42 @@
+name: Feature or enhancement
+description: New behavior or a change to existing behavior. Needs approval before any PR.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        PRs for features and enhancements are accepted only after this issue is labeled
+        `approved-enhancement` or `approved-feature`.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can't you do today, and what evidence shows it matters (frequency, cost)?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: true
+  - type: textarea
+    id: compat
+    attributes:
+      label: Compatibility and cost
+      description: What existing behavior, output or default changes? Runtime/token cost?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Observable, testable statements.
+    validations:
+      required: true

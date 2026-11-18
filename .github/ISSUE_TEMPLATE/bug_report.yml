@@ -1,0 +1,76 @@
+name: Bug report
+description: Something does not work as documented.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reports are reproduced before anything else, so exact versions and steps matter most.
+        This repo is public: don't name your project or paste anything from inside it (requirement
+        IDs, file paths, product terms, real token counts). Describe shapes instead ("phase N").
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I searched existing issues and the changelog; this is not reported or fixed yet.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: musk version and commit, gsd-core version, runtime and its version.
+      placeholder: "musk 0.5.7 (156035f), gsd-core 1.21.0, Claude Code 2.x"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, node version, install scope (global/project), linked worktrees? commit_docs?"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened?
+      description: Observed behavior, with exact output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, numbered, from a clean state. Note which checkout (main or linked worktree) and workstream each command runs in.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What is lost, wrong or blocked? Is it silent? Is there a workaround?
+    validations:
+      required: true
+  - type: textarea
+    id: cause
+    attributes:
+      label: Suspected cause and fix (optional)
+      description: File/line references welcome. Mark what you verified vs. guessed.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output (optional)
+      render: shell
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I reviewed everything above for project names, private paths, IDs and secrets.
+          required: true

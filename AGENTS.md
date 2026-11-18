@@ -24,6 +24,12 @@ command family. Read docs/design.md before moving a hook, docs/core-seams.md bef
   milestones from free-form ROADMAP.md files. Diff `milestone-check` output against the installed
   version on every project you have before shipping; only intended changes may differ.
 
+## Reports and PRs
+
+Review incoming issues and PRs with the `triage` skill: reproduce first, audit each claim, then a
+verdict label (`confirmed-bug`, `needs-reproduction`, `approved-*`, `wontfix`). Code starts only on an
+issue carrying one of those approvals. Strip private data from anything quoted into an issue.
+
 ## Test and release
 
 ```bash
