@@ -53,7 +53,7 @@ per phase.
    `propose` (write proposals, change nothing), `ask` (ask the user). *Implementation*
    (fewer tasks/files/layers/deps/flags/abstractions not demanded by any source) is always
    applied — it never removes a sourced requirement.
-2. **Recorded, never silent.** Every cut → one ledger row via `gsd-tools musk log`.
+2. **Recorded, never silent.** Every cut → one ledger row via `gsd_run musk log`.
 3. **Never cut:** threat-model / security mitigations, locked decisions (`D-NN` in CONTEXT.md
    the user made), tests that guard behaviour that remains, corrections to docs that have become
    wrong, contract or registry entries for new entry points, api-coverage rows (emit `OPT-OUT`

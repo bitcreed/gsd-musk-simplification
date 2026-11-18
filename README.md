@@ -15,7 +15,7 @@ missing question, **should this exist, and at what size?**, and asks it wherever
 | Implementation & plans | every `plan:pre` (also `/gsd-quick` and each `/gsd-quick-batch` item, gsd-core ≥ 1.21.0) | tasks, flags, layers, shims, docs, tests nobody asked for; fewest plans (≤3 tasks → one plan) |
 | Process | `/gsd-musk-retro` at milestone end | gates and steps that cost tokens and never caught anything |
 
-Every cut goes into `.planning/musk/ledger.jsonl`, and every phase's pass leaves a `pass` row, cuts or not. A phase that reaches planning with no pass row (discuss skipped, or a hand-driven discuss that missed the hook) gets the pass at `plan:pre`. The ledger lives beside GSD's own planning docs: a command run in a linked git worktree (an isolated subagent) writes the worktree's ledger and commits it on the worktree's branch, so the rows merge with the plans they belong to. Planning reads follow the active workstream. `gsd-tools musk stats` prices the cuts from
+Every cut goes into `.planning/musk/ledger.jsonl`, and every phase's pass leaves a `pass` row, cuts or not. A phase that reaches planning with no pass row (discuss skipped, or a hand-driven discuss that missed the hook) gets the pass at `plan:pre`. The ledger lives beside GSD's own planning docs: a command run in a linked git worktree (an isolated subagent) writes the worktree's ledger and commits it on the worktree's branch, so the rows merge with the plans they belong to. Planning reads follow the active workstream. `gsd_run musk stats` prices the cuts from
 **your own measured token usage** (Claude Code transcripts of this project) and subtracts the
 pass's own cost. Transcripts of Claude Code worktrees under the project count too.
 
@@ -100,7 +100,7 @@ node ~/.claude/gsd-core/bin/gsd-tools.cjs capability set musk --on --runtime cla
 ```
 
 That's it: it is on in every GSD project, existing ones included. Opt a project out with
-`gsd-tools config-set musk.enabled false`.
+`gsd_run config-set musk.enabled false`.
 
 The skills appear as `/gsd-musk-roadmap` and `/gsd-musk-retro`. GSD prefixes third-party skill stems with `gsd-`.
 
@@ -120,7 +120,7 @@ doesn't record the restaged skills' hashes ([core seam #11](docs/core-seams.md))
 update reports the `gsd-musk-*` skills as local edits and backs them up to `gsd-local-patches/`.
 Don't reapply those: the update restages the installed musk's skills itself.
 
-The capability ships a command module (`gsd-tools musk …`), so the installer asks for consent.
+The capability ships a command module (`gsd_run musk …`), so the installer asks for consent.
 The module reads `.planning/` and this project's transcripts under `~/.claude/projects/<slug>/`
 (plus `<slug>--claude-worktrees-*` for Claude Code worktrees).
 It sends nothing anywhere.
@@ -167,12 +167,14 @@ At the start of a milestone, the milestone pass runs by itself.
 
 ## Numbers
 
+`gsd_run` is gsd-core's launcher for `gsd-tools.cjs`. If it isn't on your PATH, use `node ~/.claude/gsd-core/bin/gsd-tools.cjs` in its place. A bare `gsd-tools` can resolve to a different package's CLI.
+
 ```bash
-gsd-tools musk calibrate          # measure this project's token costs from transcripts
-gsd-tools musk stats [--phase N]  # cuts, add-back ratio, gross / pass cost / net (p25–p75)
-gsd-tools musk list               # the ledger
-gsd-tools musk reinstate M-0007 --reason "needed for export"
-gsd-tools musk confirm M-0003 M-0004 --reason "reviewed at retro"   # keep cuts applied without your approval
+gsd_run musk calibrate          # measure this project's token costs from transcripts
+gsd_run musk stats [--phase N]  # cuts, add-back ratio, gross / pass cost / net (p25–p75)
+gsd_run musk list               # the ledger
+gsd_run musk reinstate M-0007 --reason "needed for export"
+gsd_run musk confirm M-0003 M-0004 --reason "reviewed at retro"   # keep cuts applied without your approval
 ```
 
 Each price carries a `basis`:

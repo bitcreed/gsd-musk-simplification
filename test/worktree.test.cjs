@@ -48,7 +48,7 @@ test('phase-check: no record -> prints the pass; pass row -> recorded', () => {
   assert.match(miss.instructions, /musk pass --phase 4 --point plan:pre/);
   // The host's requirement list is fixed by plan time and the planner leaves Deferred Ideas out
   // of its plans: every scope cut is only proposed, kept in scope and written nowhere else.
-  const logs = miss.instructions.match(/gsd-tools musk log [^`\n]*/g);
+  const logs = miss.instructions.match(/gsd_run musk log [^`\n]*/g);
   assert.ok(logs.length >= 1);
   for (const l of logs) assert.match(l, /--class scope .*--point plan:pre --status proposed/);
   assert.doesNotMatch(miss.instructions, /d{20}/, 'not the discuss:pre fragment');
@@ -148,7 +148,7 @@ test('worktree: musk state left dirty in the main checkout is named by commit an
   assert.equal(real(r.foreign_dirty.checkout), real(ctx.cwd));
   assert.deepEqual(r.foreign_dirty.files, ['.planning/musk/RETRO-x.md', '.planning/musk/ledger.jsonl']);
   const text = run(ctx, ['commit'], { cwd: wt, deps, json: false });
-  assert.match(text, /^musk: commit \w+\nmusk: uncommitted musk files in .+: \.planning\/musk\/RETRO-x\.md, \.planning\/musk\/ledger\.jsonl\. Commit them from that checkout \(gsd-tools musk commit\)\.\n$/);
+  assert.match(text, /^musk: commit \w+\nmusk: uncommitted musk files in .+: \.planning\/musk\/RETRO-x\.md, \.planning\/musk\/ledger\.jsonl\. Commit them from that checkout \(gsd_run musk commit\)\.\n$/);
   assert.equal(clean(ctx.cwd).split('\n').length, 2, 'never committed across checkouts');
 
   const rec = run(ctx, ['record'], { cwd: wt, deps, json: false });

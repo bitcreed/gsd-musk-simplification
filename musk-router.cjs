@@ -179,7 +179,7 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
   };
   // Commands that print a commit verdict also name musk files left dirty in the main checkout,
   // where a command of the same run may have written (issue #1); "committed" must not hide them.
-  const foreignLine = (f) => `musk: uncommitted musk files in ${f.checkout}: ${f.files.join(', ')}. Commit them from that checkout (gsd-tools musk commit).`;
+  const foreignLine = (f) => `musk: uncommitted musk files in ${f.checkout}: ${f.files.join(', ')}. Commit them from that checkout (gsd_run musk commit).`;
   const idOpts = { suffix: P.linked ? ledger.idSuffix(d) : null };
   const now = () => d.now().toISOString();
   const emit = (obj, text) => d.stdout((json ? JSON.stringify(obj, null, 2) : text) + '\n');
@@ -282,10 +282,10 @@ function routeMuskCommand({ args, cwd, raw, error, deps } = {}) {
     const text = [
       `musk: no subtraction pass recorded for phase ${phase}. Run it now, before you plan. The phase's requirement IDs are fixed and the plan checker demands each one, so scope cuts are proposals only:`,
       `1. Each requirement and success criterion needs an owner: a user statement, a PROJECT.md goal, a SPEC or ADR, or an owned item's dependency. Flag those that are ownerless, duplicated or nice-to-have; never security mitigations, locked decisions, anything the user asked for, tests guarding behaviour that remains, or api-coverage rows.`,
-      `2. Log each: \`gsd-tools musk log --class scope --unit req|criterion --ref "<ID>: <full text>" --reason "<why>" --phase ${phase} --point plan:pre --status proposed --inferred\``,
+      `2. Log each: \`gsd_run musk log --class scope --unit req|criterion --ref "<ID>: <full text>" --reason "<why>" --phase ${phase} --point plan:pre --status proposed --inferred\``,
       `3. Keep every flagged item in scope and plan it in full. Write it nowhere else: not to CONTEXT.md (no Deferred Ideas, no D-NN), REQUIREMENTS.md or ROADMAP.md.`,
       `4. In your return, list the proposals (M-id, ID, reason) for the user to approve.`,
-      `Implementation cuts follow your musk planner rules as usual. When done (also when nothing was flagged): gsd-tools musk pass --phase ${phase} --point plan:pre`,
+      `Implementation cuts follow your musk planner rules as usual. When done (also when nothing was flagged): gsd_run musk pass --phase ${phase} --point plan:pre`,
     ].join('\n');
     return emit({ phase, recorded: false, evidence: null, action: ms.pass_due ? 'run-milestone-pass' : 'run-pass', milestone_pass_due: ms.pass_due, instructions: msLine + text }, msLine + text);
   }

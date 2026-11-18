@@ -17,6 +17,8 @@ command family. Read docs/design.md before moving a hook, docs/core-seams.md bef
 - **Commit like GSD does.** Anything musk writes is committed at the same points GSD commits its
   own docs: through `gsd-tools query commit` (`musk commit`, or a skill's final step), never left
   for someone else to sweep up.
+- **Prompts call `gsd_run`, never bare `gsd-tools`.** On some installs `gsd-tools` on PATH is another
+  package's CLI; `gsd_run` is the launcher gsd-core's own prompts use. `test/prompts.test.cjs` guards it.
 - **Routers must be synchronous.** gsd-tools rejects a Promise-returning router.
 - **Inject dependencies.** All I/O goes through `deps` (`fs`, `homedir`, `now`, `stdout`), so tests
   run on fixtures. Fixtures are synthetic; never copy real transcripts or planning files in.
