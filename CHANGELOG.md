@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.10 (2026-11-19)
+
+- **Checked against gsd-core 1.22.0.** No code change; all tests pass on it. Core seam #6
+  (`execute:pre` call site) landed upstream (#5848); musk still registers nothing there, so the
+  seam table marks it landed and unused. 1.22.0's fixes to pinned-tag capability installs (#5408)
+  and loop-hook skill identifiers (#5397) do not touch musk, which installs from a bare tag and
+  declares no skill steps.
+
+## 0.5.9 (2026-11-18)
+
+- **Prompts call `gsd_run`, not bare `gsd-tools`.** On installs where `gsd-tools` on PATH is
+  another package's CLI, every musk `log`, `pass` and `phase-check` call failed (unknown option
+  `--phase`), so phases got no requirement pass. A test keeps bare `gsd-tools` out of prompt text.
+- **`musk audit` flags two small plans as a merge candidate.** The planner rule merges plans of
+  1–2 tasks, but audit only proposed groups of 3 tasks or fewer, so a 2 + 2 chain went unreported
+  at retro.
+- **Docs: updating musk without reinstalling gsd-core** (README "Update", core seam #11).
+
 ## 0.5.8 (2026-11-18)
 
 - **A retro no longer leaves musk state uncommitted in another checkout** (#1). Each checkout
