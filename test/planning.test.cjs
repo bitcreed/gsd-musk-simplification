@@ -58,6 +58,12 @@ test('audit: same-wave merge; large phase not quick-eligible', () => {
   assert.equal(r.quick_eligible, false);
 });
 
+test('audit: two small plans merge even past the 3-task cap; small beside large does not', () => {
+  const r = run(setup(), ['audit', '--phase', '6']);
+  assert.deepEqual(r.per_plan.map((p) => p.tasks), [2, 3, 3, 2, 2]);
+  assert.deepEqual(r.merge_candidates, [{ plans: ['6-04', '6-05'], tasks: 4, reason: 'linear-chain', files_overlap: false }]);
+});
+
 test('audit: unplanned phase reports zero plans and null quick_eligible', () => {
   const r = run(setup(), ['audit', '--phase', '5']);
   assert.equal(r.plans, 0);
@@ -96,6 +102,6 @@ test('milestone-check: bold current-milestone line lists phases; a roadmap witho
   fs.writeFileSync(st, '');
   fs.writeFileSync(rm, '# Roadmap: tool\n\n### Phase 1: A\n### Phase 2: B\n');
   const r = run(ctx, ['milestone-check']);
-  assert.deepEqual(r.phases, ['1', '2', '3', '4', '5']); // roadmap phases plus the fixture's phase dirs
+  assert.deepEqual(r.phases, ['1', '2', '3', '4', '5', '6']); // roadmap phases plus the fixture's phase dirs
   assert.match(r.marker, /MILESTONE-tool\.md$/);
 });
